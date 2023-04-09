@@ -1,4 +1,3 @@
 # Terminal AI-Chess
 
-Java 19 starter project.
-
+Simple Java 19 chess app that uses bitboards.
