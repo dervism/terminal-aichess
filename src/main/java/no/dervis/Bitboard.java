@@ -75,7 +75,47 @@ public class Bitboard implements Board, Chess {
         return (pieces[pieceType] & bit) != 0;
     }
 
+    public int getPiece(int square) {
+        long squareBitboard = 1L << square;
 
+        for (int pieceType = 0; pieceType < 6; pieceType++) {
+            if ((whitePieces[pieceType] & squareBitboard) != 0) {
+                return pieceType; // Return piece type for white pieces (0-5)
+            } else if ((blackPieces[pieceType] & squareBitboard) != 0) {
+                return pieceType + 6; // Return piece type for black pieces (6-11)
+            }
+        }
+        return -1; // No piece at the given square
+    }
+
+    public void makeMove(int move) {
+        history.add(move);
+        int fromSquare = move >>> 14;
+        int toSquare = (move >>> 7) & 0x3F;
+        int moveType = (move >>> 4) & 0x7;
+        int promotionPiece = move & 0xF;
+
+        int piece = getPiece(fromSquare);
+        int color = piece / 6;
+        int pieceType = piece % 6;
+
+        long fromBitboard = 1L << fromSquare;
+        long toBitboard = 1L << toSquare;
+
+        if (color == white) {
+            whitePieces[pieceType] ^= fromBitboard | toBitboard;
+            for (int i = 0; i < 6; i++) {
+                blackPieces[i] &= ~toBitboard; // Remove captured black piece, if any
+            }
+        } else {
+            blackPieces[pieceType] ^= fromBitboard | toBitboard;
+            for (int i = 0; i < 6; i++) {
+                whitePieces[i] &= ~toBitboard; // Remove captured white piece, if any
+            }
+        }
+
+
+    }
 
     public long[] whitePieces() {
         return whitePieces;
