@@ -24,8 +24,14 @@ public interface Board {
     /**
      * Function that converts a Long to binary string
      */
-    Function<Long, String> bitsToString = n -> String
-            .format("%64s", "")
+    Function<Long, String> longToString = n -> String
+            .format("%64s", Long.toBinaryString(n))
+            .replace(' ', '0');
+    Function<Integer, String> intToString = n -> String
+            .format("%32s", Integer.toBinaryString(n))
+            .replace(' ', '0');
+    Function<Byte, String> byteToString = n -> String
+            .format("%4s", Integer.toBinaryString(n))
             .replace(' ', '0');
 
     /**
@@ -48,6 +54,8 @@ public interface Board {
                     ')';
         }
     }
+
+    record T2<T, B>(T left, B right) {}
 
     BiFunction<Integer, Integer, Integer> indexFn = (rank, file) -> rank * 8 + file;
     Function<Integer, Integer> rowFn = index -> index / 8;
