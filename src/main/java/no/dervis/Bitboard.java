@@ -114,7 +114,40 @@ public class Bitboard implements Board, Chess {
             }
         }
 
+        // Handle en passant
+        if (moveType == 1) {
+            if (color == white) {
+                blackPieces[pawn] &= ~(1L << (toSquare - 8));
+            } else {
+                whitePieces[pawn] &= ~(1L << (toSquare + 8));
+            }
+        }
 
+        // Handle castling
+        if (moveType == 2) {
+            if (color == white) {
+                whitePieces[rook] ^= 0xA0; // Update rook position for white kingside castling
+            } else {
+                blackPieces[rook] ^= 0xA000000000000000L; // Update rook position for black kingside castling
+            }
+        } else if (moveType == 3) {
+            if (color == white) {
+                whitePieces[rook] ^= 0x5; // Update rook position for white queenside castling
+            } else {
+                blackPieces[rook] ^= 0x500000000000000L; // Update rook position for black queenside castling
+            }
+        }
+
+        // Handle promotion
+        if (moveType == 4) {
+            if (color == white) {
+                whitePieces[pawn] &= ~toBitboard; // Remove promoted white pawn
+                whitePieces[promotionPiece] |= toBitboard; // Add promoted white piece
+            } else {
+                blackPieces[pawn] &= ~toBitboard; // Remove promoted black pawn
+                blackPieces[promotionPiece] |= toBitboard; // Add promoted black piece
+            }
+        }
     }
 
     public long[] whitePieces() {
