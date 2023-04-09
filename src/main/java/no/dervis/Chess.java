@@ -1,5 +1,6 @@
 package no.dervis;
 
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
@@ -22,6 +23,13 @@ public interface Chess {
     int CHECKMATE = 6;
     int DRAW = 7;
 
+    enum MoveType {
+        NORMAL,
+        CAPTURE,
+        CASTLE_KING_SIDE,
+        CASTLE_QUEEN_SIDE,
+    }
+
     Function<Integer, String> pieceToStr = pieceType -> switch (pieceType) {
         case pawn -> " ♙ ";
         case knight -> " ♘ ";
@@ -39,9 +47,10 @@ public interface Chess {
         default -> throw new IllegalStateException("Unexpected value: " + pieceType);
     };
 
-    Function<Bitboard, String> boardToStr = board -> {
+    BiFunction<Bitboard, Boolean, StringBuilder> boardToStr = (board, reverse) -> {
         StringBuilder builder = new StringBuilder();
         IntStream.range(0, 8)
+                .map(i -> reverse ? (8 - 1 - i) : i)
                 .forEach(row -> {
                     String line = IntStream.range(0, 8)
                             .mapToObj(col -> {
@@ -57,6 +66,8 @@ public interface Chess {
                             .toString();
                     IntStream.range(0, 1).forEach(i -> builder.append(line).append(System.lineSeparator()));
                 });
-        return builder.toString();
+        return builder;
     };
+
+    Function<Bitboard, StringBuilder> printBoard = board -> boardToStr.apply(board, true);
 }
