@@ -2,8 +2,6 @@ package no.dervis;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
-
 import static no.dervis.Board.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -24,16 +22,5 @@ class BoardTest {
         assertEquals(7, h8.rank());
         assertEquals(63, indexFn.apply(h8.rank(), h8.file()));
 
-    }
-
-    @Test
-    void diagonals() {
-
-        List<List<String>> applied = squaresStrFn.apply(a1.index());
-        assertEquals(4, applied.size());
-
-        System.out.println(
-                applied
-        );
     }
 }

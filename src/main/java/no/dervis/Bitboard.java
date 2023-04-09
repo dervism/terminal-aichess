@@ -4,24 +4,31 @@ import java.util.LinkedList;
 
 public class Bitboard implements Board, Chess {
 
-    private final long[] whitePieces;
-    private final long[] blackPieces;
-    private final LinkedList<Integer> history;
+    private long[] whitePieces;
+    private long[] blackPieces;
+    private LinkedList<Integer> history;
+    private int castlingRights;
+    private int colorToMove;
 
     public Bitboard() {
         whitePieces = new long[6];
         blackPieces = new long[6];
         history = new LinkedList<>();
-        initialiseBoard();
+        colorToMove = 0;
+        castlingRights = 0b1111;
     }
 
-    private Bitboard(long[] wp, long[] bp, LinkedList<Integer> h) {
-        whitePieces = wp;
-        blackPieces = bp;
-        history = h;
+    public Bitboard copy() {
+        Bitboard copy = new Bitboard();
+        copy.whitePieces = whitePieces.clone();
+        copy.blackPieces = blackPieces.clone();
+        copy.history = new LinkedList<>(history);
+        copy.castlingRights = castlingRights;
+        copy.colorToMove = colorToMove;
+        return copy;
     }
 
-    private void initialiseBoard() {
+    public void initialiseBoard() {
         // Initialize pawns
         whitePieces[0] = 0x000000000000FF00L;
         blackPieces[0] = 0x00FF000000000000L;
@@ -47,28 +54,21 @@ public class Bitboard implements Board, Chess {
         blackPieces[5] = 0x1000000000000000L;
     }
 
-    public Bitboard copy() {
-        return new Bitboard(whitePieces.clone(), blackPieces.clone(), new LinkedList<>(history));
-    }
-
-    public void setPiece(int pieceType, int color, int rank, int file) {
-        int squareIndex = indexFn.apply(rank, file);
+    public void setPiece(int pieceType, int color, int squareIndex) {
         long bit = 1L << squareIndex;
 
         long[] pieces = color == 0 ? whitePieces : blackPieces;
         pieces[pieceType] |= bit;
     }
 
-    public void removePiece(int pieceType, int color, int rank, int file) {
-        int squareIndex = indexFn.apply(rank, file);
+    public void removePiece(int pieceType, int color, int squareIndex) {
         long bit = 1L << squareIndex;
 
         long[] pieces = color == 0 ? whitePieces : blackPieces;
         pieces[pieceType] &= ~bit;
     }
 
-    public boolean hasPiece(int pieceType, int color, int rank, int file) {
-        int squareIndex = indexFn.apply(rank, file);
+    public boolean hasPiece(int pieceType, int color, int squareIndex) {
         long bit = 1L << squareIndex;
 
         long[] pieces = color == 0 ? whitePieces : blackPieces;
@@ -148,6 +148,31 @@ public class Bitboard implements Board, Chess {
                 blackPieces[promotionPiece] |= toBitboard; // Add promoted black piece
             }
         }
+
+        // update the castling rights
+        if (color == white) {
+            if (pieceType == king) {
+                castlingRights &= ~0b0011; // Remove white king-side and queen-side castling rights
+            } else if (pieceType == rook) {
+                if (fromSquare == h1.index()) {
+                    castlingRights &= ~0b0001; // Remove white king-side castling rights
+                } else if (fromSquare == a1.index()) {
+                    castlingRights &= ~0b0010; // Remove white queen-side castling rights
+                }
+            }
+        } else {
+            if (pieceType == king) {
+                castlingRights &= ~0b1100; // Remove black king-side and queen-side castling rights
+            } else if (pieceType == rook) {
+                if (fromSquare == h8.index()) {
+                    castlingRights &= ~0b0100; // Remove black king-side castling rights
+                } else if (fromSquare == a8.index()) {
+                    castlingRights &= ~0b1000; // Remove black queen-side castling rights
+                }
+            }
+        }
+
+        colorToMove ^= 1;
     }
 
     public long[] whitePieces() {
@@ -160,6 +185,19 @@ public class Bitboard implements Board, Chess {
 
     public LinkedList<Integer> history() {
         return history;
+    }
+
+    public int castlingRights() {
+        return castlingRights;
+    }
+
+    public boolean canCastle(int color) {
+        return (color == white && ((castlingRights & 0b0001) != 0 || (castlingRights & 0b0010) != 0)) ||
+               (color == black && ((castlingRights & 0b0100) != 0 || (castlingRights & 0b1000) != 0));
+    }
+
+    public int turn() {
+        return colorToMove;
     }
 }
 

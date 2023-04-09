@@ -12,9 +12,10 @@ public class TerminalChess {
 
     public static void main(String[] args) {
         Bitboard board = new Bitboard();
+        board.initialiseBoard();
         Generator movegen = new Generator(board);
 
-        System.out.println(Chess.boardToStr.apply(board));
+        System.out.println(Chess.boardToStr.apply(board, true));
         boolean status = true;
 
         while (status) {
@@ -31,7 +32,7 @@ public class TerminalChess {
                 int move = moves.get(new Random().nextInt(0, moves.size()));
                 board.makeMove(move);
 
-                System.out.println(Chess.boardToStr.apply(board));
+                System.out.println(Chess.boardToStr.apply(board, true));
             }
         }
     }
