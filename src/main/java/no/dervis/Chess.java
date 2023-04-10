@@ -6,12 +6,12 @@ import java.util.stream.IntStream;
 
 public interface Chess {
 
-    int pawn = 0;
-    int knight = 1;
-    int bishop = 2;
-    int rook = 3;
-    int queen = 4;
-    int king = 5;
+    int pawn = 0, bpawn = 6;
+    int knight = 1, bknight = 7;
+    int bishop = 2, bbishop = 8;
+    int rook = 3, brook = 9;
+    int queen = 4, bqueen = 10;
+    int king = 5, bking = 11;
     int empty = -1;
 
     int white = 0;
@@ -37,12 +37,12 @@ public interface Chess {
         case rook -> " ♖ ";
         case queen -> " ♕ ";
         case king -> " ♔ ";
-        case pawn + 6 -> " ♟︎ ";
-        case knight + 6 -> " ♞ ";
-        case bishop + 6 -> " ♝ ";
-        case rook + 6 -> " ♜ ";
-        case queen + 6 -> " ♛ ";
-        case king + 6 -> " ♚ ";
+        case bpawn -> " ♟︎ ";
+        case bknight -> " ♞ ";
+        case bbishop -> " ♝ ";
+        case brook -> " ♜ ";
+        case bqueen -> " ♛ ";
+        case bking -> " ♚ ";
         case empty -> "   ";
         default -> throw new IllegalStateException("Unexpected value: " + pieceType);
     };
