@@ -68,6 +68,14 @@ class BitboardTest implements Board, Chess{
         assertEquals(king, board.getPiece(e1.index()));
         assertEquals(rook, board.getPiece(h1.index()));
         assertEquals(rook, board.getPiece(a1.index()));
+
+        board.setPiece(king, black, e8.index());
+        board.setPiece(rook, black, h8.index());
+        board.setPiece(rook, black, a8.index());
+
+        assertEquals(bking, board.getPiece(e8.index()));
+        assertEquals(brook, board.getPiece(h8.index()));
+        assertEquals(brook, board.getPiece(a8.index()));
     }
 
     @Test
