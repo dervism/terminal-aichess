@@ -29,8 +29,8 @@ public class Generator {
     }
 
     private long getEnPassantTarget(int lastMove) {
-        int fromSquare = lastMove >>> 6;
-        int toSquare = lastMove & 0x3F;
+        int fromSquare = lastMove >>> 14;
+        int toSquare = (lastMove >>> 7) & 0x3F;
         int piece = board.getPiece(toSquare);
 
         if (piece == (/* White pawn */ 0) && (toSquare - fromSquare) == 16) {
