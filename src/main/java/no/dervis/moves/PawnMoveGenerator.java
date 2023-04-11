@@ -71,10 +71,9 @@ public class PawnMoveGenerator implements Board {
 
         // Generate en passant captures
         if (enPassantTarget != 0) {
-            long targetBitboard = 1L << enPassantTarget;
             long enPassantCaptures = color == 0
-                    ? ((pawns << 7) & ~FILE_A | (pawns << 9) & ~FILE_H) & targetBitboard
-                    : ((pawns >>> 9) & ~FILE_A | (pawns >>> 7) & ~FILE_H) & targetBitboard;
+                    ? ((pawns << 7) & ~FILE_A | (pawns << 9) & ~FILE_H) & enPassantTarget
+                    : ((pawns >>> 9) & ~FILE_A | (pawns >>> 7) & ~FILE_H) & enPassantTarget;
             while (enPassantCaptures != 0) {
                 int toSquare = Long.numberOfTrailingZeros(enPassantCaptures);
                 int fromSquare = color == 0 ? toSquare - (toSquare % 8 == 0 ? 7 : 9) : toSquare + (toSquare % 8 == 0 ? 9 : 7);

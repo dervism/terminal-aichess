@@ -156,7 +156,27 @@ class BitboardTest implements Board, Chess{
             assertEquals(bpawn, bPawnMovesBoard2.getPiece(pawnSquare.index() - 16));
             assertEquals(empty, bPawnMovesBoard2.getPiece(pawnSquare.index()));
         }
+    }
 
+    @Test
+    void makeMovePawnsEnPassant() {
+        Bitboard board = new Bitboard();
+        board.initialiseBoard();
+
+        Bitboard wPawnMovesBoard = board.copy();
+        int bmove = (a7.index() << 14) | (a4.index() << 7);
+        int wmove = (b2.index() << 14) | (b4.index() << 7);
+        wPawnMovesBoard.makeMove(bmove);
+        wPawnMovesBoard.makeMove(wmove);
+        System.out.println(printBoard.apply(wPawnMovesBoard));
+
+        Generator g = new Generator(wPawnMovesBoard);
+        List<T2<Integer, Move>> moves = g.generateMoves(black).stream()
+                .map(move -> new T2<>(move, Move.createMove(move, wPawnMovesBoard)))
+                .peek(System.out::println)
+                .toList();
+
+        assertEquals(1, moves.stream().filter(m -> m.right().moveType() == MoveType.EN_PASSANT.ordinal()).toList().size());
     }
 
     @Test

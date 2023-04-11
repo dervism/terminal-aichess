@@ -115,7 +115,7 @@ public class Bitboard implements Board, Chess {
         }
 
         // Handle en passant
-        if (moveType == 1) {
+        if (moveType == MoveType.EN_PASSANT.ordinal()) {
             if (color == white) {
                 blackPieces[pawn] &= ~(1L << (toSquare - 8));
             } else {
