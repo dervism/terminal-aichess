@@ -1,4 +1,4 @@
-package no.dervis;
+package no.dervis.terminal_aichess;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -8,7 +8,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static no.dervis.Board.T3.of;
+import static no.dervis.terminal_aichess.Board.T3.of;
 
 public interface Board {
 

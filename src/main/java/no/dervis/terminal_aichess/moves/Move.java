@@ -1,7 +1,7 @@
-package no.dervis.moves;
+package no.dervis.terminal_aichess.moves;
 
-import no.dervis.Bitboard;
-import no.dervis.Chess;
+import no.dervis.terminal_aichess.Bitboard;
+import no.dervis.terminal_aichess.Chess;
 
 public record Move(
         int piece,

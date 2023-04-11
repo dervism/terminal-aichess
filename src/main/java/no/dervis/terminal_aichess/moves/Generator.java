@@ -1,6 +1,6 @@
-package no.dervis.moves;
+package no.dervis.terminal_aichess.moves;
 
-import no.dervis.Bitboard;
+import no.dervis.terminal_aichess.Bitboard;
 
 import java.util.ArrayList;
 import java.util.List;

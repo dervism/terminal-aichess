@@ -1,6 +1,6 @@
-package no.dervis;
+package no.dervis.terminal_aichess;
 
-import no.dervis.moves.Generator;
+import no.dervis.terminal_aichess.moves.Generator;
 
 import java.util.List;
 import java.util.Random;

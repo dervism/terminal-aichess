@@ -1,8 +1,8 @@
-package no.dervis;
+package no.dervis.terminal_aichess;
 
 import org.junit.jupiter.api.Test;
 
-import static no.dervis.Board.*;
+import static no.dervis.terminal_aichess.Board.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class BoardTest {

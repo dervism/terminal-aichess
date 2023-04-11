@@ -1,13 +1,13 @@
-package no.dervis.moves;
+package no.dervis.terminal_aichess.moves;
 
-import no.dervis.Bitboard;
-import no.dervis.Board;
+import no.dervis.terminal_aichess.Bitboard;
+import no.dervis.terminal_aichess.Board;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static no.dervis.moves.BishopMoveGenerator.bishopAttacks;
-import static no.dervis.moves.RookMoveGenerator.rookAttacks;
+import static no.dervis.terminal_aichess.moves.BishopMoveGenerator.bishopAttacks;
+import static no.dervis.terminal_aichess.moves.RookMoveGenerator.rookAttacks;
 
 public class QueenMoveGenerator implements Board {
 

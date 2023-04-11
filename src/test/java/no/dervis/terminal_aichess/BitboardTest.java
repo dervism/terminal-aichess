@@ -1,7 +1,7 @@
-package no.dervis;
+package no.dervis.terminal_aichess;
 
-import no.dervis.moves.Generator;
-import no.dervis.moves.Move;
+import no.dervis.terminal_aichess.moves.Generator;
+import no.dervis.terminal_aichess.moves.Move;
 import org.junit.jupiter.api.Test;
 
 import java.util.LinkedList;
@@ -9,7 +9,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class BitboardTest implements Board, Chess{
+class BitboardTest implements Board, Chess {
 
     @Test
     void setPiece() {

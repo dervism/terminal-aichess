@@ -1,4 +1,4 @@
-package no.dervis;
+package no.dervis.terminal_aichess;
 
 import java.util.function.BiFunction;
 import java.util.function.Function;

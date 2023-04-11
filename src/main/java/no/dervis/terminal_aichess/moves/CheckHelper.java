@@ -1,6 +1,6 @@
-package no.dervis.moves;
+package no.dervis.terminal_aichess.moves;
 
-import no.dervis.Chess;
+import no.dervis.terminal_aichess.Chess;
 
 public class CheckHelper implements Chess {
 
