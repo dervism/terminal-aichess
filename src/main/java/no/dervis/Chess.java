@@ -25,7 +25,7 @@ public interface Chess {
 
     enum MoveType {
         NORMAL,
-        CAPTURE,
+        EN_PASSANT,
         CASTLE_KING_SIDE,
         CASTLE_QUEEN_SIDE,
     }
