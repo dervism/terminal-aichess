@@ -180,7 +180,7 @@ class BitboardTest implements Board, Chess {
     }
 
     @Test
-    void castlingRights() {
+    void whiteCastlingRights() {
         Bitboard board = new Bitboard();
 
         board.setPiece(king, white, e1.index());
@@ -222,5 +222,50 @@ class BitboardTest implements Board, Chess {
         assertEquals(rook, queenSideCastle.getPiece(d1.index()));
         assertEquals(rook, queenSideCastle.getPiece(h1.index()));
         assertEquals(empty, queenSideCastle.getPiece(a1.index()));
+    }
+
+    @Test
+    void blackCastlingRights() {
+        Bitboard board = new Bitboard();
+
+        board.setPiece(king, white, e1.index());
+        board.setPiece(king, black, e8.index());
+        board.setPiece(rook, white, h1.index());
+        board.setPiece(rook, black, h8.index());
+        board.setPiece(rook, white, a1.index());
+        board.setPiece(rook, black, a8.index());
+        System.out.println(printBoard.apply(board));
+
+        Generator g = new Generator(board);
+        List<T2<Integer, Move>> moves = g.generateMoves(black).stream()
+                .map(move -> new T2<>(move, Move.createMove(move, board)))
+                .toList();
+        assertEquals(26, moves.size());
+
+        List<T2<Integer, Move>> castleMoves = moves
+                .stream()
+                .filter(move -> move.right().moveType() == MoveType.CASTLE_KING_SIDE.ordinal()
+                        || move.right().moveType() == MoveType.CASTLE_QUEEN_SIDE.ordinal()).toList();
+        assertEquals(2, castleMoves.size());
+
+        Bitboard kingSideCastle = board.copy();
+        kingSideCastle.makeMove(castleMoves.get(0).left());
+        System.out.println(printBoard.apply(kingSideCastle));
+        assertFalse(kingSideCastle.canCastle(black));
+        assertTrue(kingSideCastle.canCastle(white));
+        assertEquals(bking, kingSideCastle.getPiece(g8.index()));
+        assertEquals(brook, kingSideCastle.getPiece(f8.index()));
+        assertEquals(brook, kingSideCastle.getPiece(a8.index()));
+        assertEquals(empty, kingSideCastle.getPiece(e8.index()));
+
+        Bitboard queenSideCastle = board.copy();
+        queenSideCastle.makeMove(castleMoves.get(1).left());
+        System.out.println(boardToStr.apply(queenSideCastle, false));
+        assertFalse(queenSideCastle.canCastle(black));
+        assertTrue(queenSideCastle.canCastle(white));
+        assertEquals(bking, queenSideCastle.getPiece(c8.index()));
+        assertEquals(brook, queenSideCastle.getPiece(d8.index()));
+        assertEquals(brook, queenSideCastle.getPiece(h8.index()));
+        assertEquals(empty, queenSideCastle.getPiece(a8.index()));
     }
 }
