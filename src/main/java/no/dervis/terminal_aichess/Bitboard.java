@@ -132,7 +132,7 @@ public class Bitboard implements Board, Chess {
             }
         } else if (moveType == 3) {
             if (color == white) {
-                whitePieces[rook] ^= 0x5; // Update rook position for white queenside castling
+                whitePieces[rook] ^= 0x9; // Update rook position for white queenside castling
             } else {
                 blackPieces[rook] ^= 0x500000000000000L; // Update rook position for black queenside castling
             }
