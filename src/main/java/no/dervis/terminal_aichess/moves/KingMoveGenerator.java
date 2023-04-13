@@ -25,11 +25,11 @@ public class KingMoveGenerator implements Board, Chess {
         List<Integer> moves = new ArrayList<>();
 
         long kingBoard = color == 0 ? whitePieces[king] : blackPieces[king];
-        long friendlyPieces = color == 0 ? whitePieces[0] | whitePieces[1] | whitePieces[2] | whitePieces[3] | whitePieces[4] | whitePieces[5]
-                : blackPieces[0] | blackPieces[1] | blackPieces[2] | blackPieces[3] | blackPieces[4] | blackPieces[5];
-        long allPieces = friendlyPieces | (color == 0 ? blackPieces[0] | blackPieces[1] | blackPieces[2] | blackPieces[3] | blackPieces[4] | blackPieces[5]
-                : whitePieces[0] | whitePieces[1] | whitePieces[2] | whitePieces[3] | whitePieces[4] | whitePieces[5]);
+        long allWhitePieces = whitePieces[0] | whitePieces[1] | whitePieces[2] | whitePieces[3] | whitePieces[4] | whitePieces[5];
+        long allBlackPieces = blackPieces[0] | blackPieces[1] | blackPieces[2] | blackPieces[3] | blackPieces[4] | blackPieces[5];
+        long friendlyPieces = color == 0 ? allWhitePieces : allBlackPieces;
 
+        long allPieces = friendlyPieces | (color == 0 ? allBlackPieces : allWhitePieces);
 
         int fromSquare = Long.numberOfTrailingZeros(kingBoard);
 
@@ -49,7 +49,7 @@ public class KingMoveGenerator implements Board, Chess {
             if ((castlingRights & 0b0001) != 0 && (allPieces & 0b0110_0000_0000_0000L) == 0) {
                 moves.add((fromSquare << 14) | (fromSquare + 2 << 7) | (MoveType.CASTLE_KING_SIDE.ordinal() << 4));
             }
-            if ((castlingRights & 0b0010) != 0 && (allPieces & 0b0000_1110_0000_0000L) == 0) {
+            if ((castlingRights & 0b0010) != 0 && (allPieces & 0b0110L) == 0) {
                 moves.add((fromSquare << 14) | (fromSquare - 2 << 7) | (MoveType.CASTLE_QUEEN_SIDE.ordinal() << 4));
             }
         } else {

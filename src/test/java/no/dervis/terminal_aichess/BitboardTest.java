@@ -6,10 +6,14 @@ import org.junit.jupiter.api.Test;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.function.Predicate;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class BitboardTest implements Board, Chess {
+
+    private final Predicate<T2<Integer, Move>> onlyCastlingMoves = move -> move.right().moveType() == MoveType.CASTLE_KING_SIDE.ordinal()
+            || move.right().moveType() == MoveType.CASTLE_QUEEN_SIDE.ordinal();
 
     @Test
     void setPiece() {
@@ -199,8 +203,7 @@ class BitboardTest implements Board, Chess {
 
         List<T2<Integer, Move>> castleMoves = moves
                 .stream()
-                .filter(move -> move.right().moveType() == MoveType.CASTLE_KING_SIDE.ordinal()
-                || move.right().moveType() == MoveType.CASTLE_QUEEN_SIDE.ordinal()).toList();
+                .filter(onlyCastlingMoves).toList();
         assertEquals(2, castleMoves.size());
 
         Bitboard kingSideCastle = board.copy();
@@ -244,8 +247,7 @@ class BitboardTest implements Board, Chess {
 
         List<T2<Integer, Move>> castleMoves = moves
                 .stream()
-                .filter(move -> move.right().moveType() == MoveType.CASTLE_KING_SIDE.ordinal()
-                        || move.right().moveType() == MoveType.CASTLE_QUEEN_SIDE.ordinal()).toList();
+                .filter(onlyCastlingMoves).toList();
         assertEquals(2, castleMoves.size());
 
         Bitboard kingSideCastle = board.copy();
@@ -267,5 +269,34 @@ class BitboardTest implements Board, Chess {
         assertEquals(brook, queenSideCastle.getPiece(d8.index()));
         assertEquals(brook, queenSideCastle.getPiece(h8.index()));
         assertEquals(empty, queenSideCastle.getPiece(a8.index()));
+    }
+
+    @Test
+    void castlingNotAllowed() {
+        Bitboard board = new Bitboard();
+
+        board.setPiece(king, white, e1.index());
+        board.setPiece(bishop, white, f1.index());
+        board.setPiece(bishop, black, f8.index());
+        board.setPiece(king, black, e8.index());
+        board.setPiece(rook, white, h1.index());
+        board.setPiece(rook, black, h8.index());
+        board.setPiece(rook, white, a1.index());
+        board.setPiece(rook, black, a8.index());
+        board.setPiece(knight, white, b1.index());
+        board.setPiece(knight, black, b8.index());
+
+        System.out.println(printBoard.apply(board));
+
+        Generator g = new Generator(board);
+        List<T2<Integer, Move>> whiteMoves = g.generateMoves(white).stream()
+                .map(move -> new T2<>(move, Move.createMove(move, board)))
+                .filter(onlyCastlingMoves).toList();
+        assertEquals(0, whiteMoves.size());
+
+        List<T2<Integer, Move>> blackMoves = g.generateMoves(black).stream()
+                .map(move -> new T2<>(move, Move.createMove(move, board)))
+                .filter(onlyCastlingMoves).toList();
+        assertEquals(0, blackMoves.size());
     }
 }
