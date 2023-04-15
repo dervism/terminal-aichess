@@ -53,10 +53,10 @@ public class KingMoveGenerator implements Board, Chess {
                 moves.add((fromSquare << 14) | (fromSquare - 2 << 7) | (MoveType.CASTLE_QUEEN_SIDE.ordinal() << 4));
             }
         } else {
-            if ((castlingRights & 0b0100) != 0 && (allPieces & 0b0110_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000L) == 0) {
+            if ((castlingRights & 0b0100) != 0 && (allPieces & 0x6000000000000000L) == 0) {
                 moves.add((fromSquare << 14) | (fromSquare + 2 << 7) | (MoveType.CASTLE_KING_SIDE.ordinal() << 4));
             }
-            if ((castlingRights & 0b1000) != 0 && (allPieces & 0b0000_1110_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000L) == 0) {
+            if ((castlingRights & 0b1000) != 0 && (allPieces & 0xe00000000000000L) == 0) {
                 moves.add((fromSquare << 14) | (fromSquare - 2 << 7) | (MoveType.CASTLE_QUEEN_SIDE.ordinal() << 4));
             }
         }

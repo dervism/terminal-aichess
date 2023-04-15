@@ -218,4 +218,12 @@ public interface Board {
      * Returns the diagonals, rows and columns that contains the given square as list of strings.
      */
     Function<Integer, List<List<String>>> squaresStrFn = filterSquares.andThen(squaresToStr);
+
+    /**
+     * Helpful function that is used to convert a 64-bit string to hex number.
+     * The input represents a chess board where the MSB is black side and LSB is white.
+     * Here is an example of how to use this function:
+     * System.out.println(binaryToStr.apply(0b0000_1110_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000L));
+     */
+    Function<Long, String> binaryToStr = Long::toHexString;
 }
