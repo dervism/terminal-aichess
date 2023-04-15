@@ -285,18 +285,21 @@ class BitboardTest implements Board, Chess {
         board.setPiece(rook, black, a8.index());
         board.setPiece(knight, white, b1.index());
         board.setPiece(knight, black, b8.index());
-
-        System.out.println(printBoard.apply(board));
+        System.out.println(boardToStr.apply(board, false));
 
         Generator g = new Generator(board);
         List<T2<Integer, Move>> whiteMoves = g.generateMoves(white).stream()
                 .map(move -> new T2<>(move, Move.createMove(move, board)))
-                .filter(onlyCastlingMoves).toList();
+                .filter(onlyCastlingMoves)
+                .peek(System.out::println)
+                .toList();
         assertEquals(0, whiteMoves.size());
 
         List<T2<Integer, Move>> blackMoves = g.generateMoves(black).stream()
                 .map(move -> new T2<>(move, Move.createMove(move, board)))
-                .filter(onlyCastlingMoves).toList();
+                .filter(onlyCastlingMoves)
+                .peek(System.out::println)
+                .toList();
         assertEquals(0, blackMoves.size());
     }
 }

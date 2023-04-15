@@ -11,7 +11,7 @@ public class KingMoveGenerator implements Board, Chess {
 
     private final long[] whitePieces;
     private final long[] blackPieces;
-    private int castlingRights;
+    private final int castlingRights;
 
     public KingMoveGenerator(Bitboard board) {
         this.whitePieces = board.whitePieces();
@@ -46,17 +46,17 @@ public class KingMoveGenerator implements Board, Chess {
 
         // Castling moves
         if (color == 0) {
-            if ((castlingRights & 0b0001) != 0 && (allPieces & 0b0110_0000_0000_0000L) == 0) {
+            if ((castlingRights & 0b0001) != 0 && (allPieces & 0b110_0000L) == 0) {
                 moves.add((fromSquare << 14) | (fromSquare + 2 << 7) | (MoveType.CASTLE_KING_SIDE.ordinal() << 4));
             }
-            if ((castlingRights & 0b0010) != 0 && (allPieces & 0b0110L) == 0) {
+            if ((castlingRights & 0b0010) != 0 && (allPieces & 0b1110L) == 0) {
                 moves.add((fromSquare << 14) | (fromSquare - 2 << 7) | (MoveType.CASTLE_QUEEN_SIDE.ordinal() << 4));
             }
         } else {
-            if ((castlingRights & 0b0100) != 0 && (allPieces & 0b0110_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000L) == 0) {
+            if ((castlingRights & 0b0100) != 0 && (allPieces & 0b0110_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000L) == 0) {
                 moves.add((fromSquare << 14) | (fromSquare + 2 << 7) | (MoveType.CASTLE_KING_SIDE.ordinal() << 4));
             }
-            if ((castlingRights & 0b1000) != 0 && (allPieces & 0b0000_1110_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000L) == 0) {
+            if ((castlingRights & 0b1000) != 0 && (allPieces & 0b0000_1110_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000L) == 0) {
                 moves.add((fromSquare << 14) | (fromSquare - 2 << 7) | (MoveType.CASTLE_QUEEN_SIDE.ordinal() << 4));
             }
         }
