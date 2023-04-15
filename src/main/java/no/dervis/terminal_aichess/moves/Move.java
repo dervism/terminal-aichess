@@ -1,6 +1,7 @@
 package no.dervis.terminal_aichess.moves;
 
 import no.dervis.terminal_aichess.Bitboard;
+import no.dervis.terminal_aichess.Board.T3;
 import no.dervis.terminal_aichess.Chess;
 
 public record Move(
@@ -75,6 +76,10 @@ public record Move(
                 moveType,
                 promotionPiece
         );
+    }
+
+    public static int createMove(T3 from, T3 to) {
+        return (from.index() << 14) | (to.index() << 7);
     }
 
     @Override

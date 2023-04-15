@@ -168,8 +168,8 @@ class BitboardTest implements Board, Chess {
         board.initialiseBoard();
 
         Bitboard wPawnMovesBoard = board.copy();
-        int bmove = (a7.index() << 14) | (a4.index() << 7);
-        int wmove = (b2.index() << 14) | (b4.index() << 7);
+        int bmove = Move.createMove(a7, a4);
+        int wmove = Move.createMove(b2, b4);
         wPawnMovesBoard.makeMove(bmove);
         wPawnMovesBoard.makeMove(wmove);
         System.out.println(printBoard.apply(wPawnMovesBoard));
