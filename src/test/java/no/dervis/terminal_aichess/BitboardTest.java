@@ -168,10 +168,8 @@ class BitboardTest implements Board, Chess {
         board.initialiseBoard();
 
         Bitboard whitePawnABMoves = board.copy();
-        int a7Toa4 = Move.createMove(a7, a4);
-        int b2Tob4 = Move.createMove(b2, b4);
-        whitePawnABMoves.makeMove(a7Toa4);
-        whitePawnABMoves.makeMove(b2Tob4);
+        whitePawnABMoves.makeMove(a7, a4);
+        whitePawnABMoves.makeMove(b2, b4);
         System.out.println(printBoard.apply(whitePawnABMoves));
 
         Generator g = new Generator(whitePawnABMoves);
@@ -182,17 +180,14 @@ class BitboardTest implements Board, Chess {
         assertEquals(1, movesAB.stream().filter(m -> m.right().moveType() == MoveType.EN_PASSANT.ordinal()).toList().size());
 
         Bitboard whitePawnHGMoves = board.copy();
-        int g7Tog4 = Move.createMove(g7, g4);
-        int h2Toh4 = Move.createMove(h2, h4);
-        whitePawnHGMoves.makeMove(g7Tog4);
-        whitePawnHGMoves.makeMove(h2Toh4);
+        whitePawnHGMoves.makeMove(g7, g4);
+        whitePawnHGMoves.makeMove(h2, h4);
         System.out.println(printBoard.apply(whitePawnHGMoves));
 
         List<T2<Integer, Move>> movesHG = g.generateMoves(black).stream()
                 .map(move -> new T2<>(move, Move.createMove(move, whitePawnHGMoves)))
                 .toList();
         assertEquals(1, movesHG.stream().filter(m -> m.right().moveType() == MoveType.EN_PASSANT.ordinal()).toList().size());
-
     }
 
     @Test

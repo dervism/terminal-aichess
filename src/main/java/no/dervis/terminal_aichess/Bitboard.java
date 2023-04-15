@@ -1,5 +1,7 @@
 package no.dervis.terminal_aichess;
 
+import no.dervis.terminal_aichess.moves.Move;
+
 import java.util.LinkedList;
 
 public class Bitboard implements Board, Chess {
@@ -86,6 +88,10 @@ public class Bitboard implements Board, Chess {
             }
         }
         return -1; // No piece at the given square
+    }
+
+    public void makeMove(T3 from, T3 to) {
+        makeMove(Move.createMove(from, to));
     }
 
     public void makeMove(int move) {
