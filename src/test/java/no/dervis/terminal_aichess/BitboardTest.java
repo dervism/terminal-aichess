@@ -167,20 +167,32 @@ class BitboardTest implements Board, Chess {
         Bitboard board = new Bitboard();
         board.initialiseBoard();
 
-        Bitboard wPawnMovesBoard = board.copy();
-        int bmove = Move.createMove(a7, a4);
-        int wmove = Move.createMove(b2, b4);
-        wPawnMovesBoard.makeMove(bmove);
-        wPawnMovesBoard.makeMove(wmove);
-        System.out.println(printBoard.apply(wPawnMovesBoard));
+        Bitboard whitePawnABMoves = board.copy();
+        int a7Toa4 = Move.createMove(a7, a4);
+        int b2Tob4 = Move.createMove(b2, b4);
+        whitePawnABMoves.makeMove(a7Toa4);
+        whitePawnABMoves.makeMove(b2Tob4);
+        System.out.println(printBoard.apply(whitePawnABMoves));
 
-        Generator g = new Generator(wPawnMovesBoard);
-        List<T2<Integer, Move>> moves = g.generateMoves(black).stream()
-                .map(move -> new T2<>(move, Move.createMove(move, wPawnMovesBoard)))
-                .peek(System.out::println)
+        Generator g = new Generator(whitePawnABMoves);
+        List<T2<Integer, Move>> movesAB = g.generateMoves(black).stream()
+                .map(move -> new T2<>(move, Move.createMove(move, whitePawnABMoves)))
                 .toList();
 
-        assertEquals(1, moves.stream().filter(m -> m.right().moveType() == MoveType.EN_PASSANT.ordinal()).toList().size());
+        assertEquals(1, movesAB.stream().filter(m -> m.right().moveType() == MoveType.EN_PASSANT.ordinal()).toList().size());
+
+        Bitboard whitePawnHGMoves = board.copy();
+        int g7Tog4 = Move.createMove(g7, g4);
+        int h2Toh4 = Move.createMove(h2, h4);
+        whitePawnHGMoves.makeMove(g7Tog4);
+        whitePawnHGMoves.makeMove(h2Toh4);
+        System.out.println(printBoard.apply(whitePawnHGMoves));
+
+        List<T2<Integer, Move>> movesHG = g.generateMoves(black).stream()
+                .map(move -> new T2<>(move, Move.createMove(move, whitePawnHGMoves)))
+                .toList();
+        assertEquals(1, movesHG.stream().filter(m -> m.right().moveType() == MoveType.EN_PASSANT.ordinal()).toList().size());
+
     }
 
     @Test
