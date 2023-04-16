@@ -55,7 +55,9 @@ public interface Board {
         }
     }
 
-    record T2<T, B>(T left, B right) {}
+    record T2<T, B>(T left, B right) {
+        static <T, B> T2<T, B> of(T left, B right) { return new T2<>(left, right); }
+    }
 
     BiFunction<Integer, Integer, Integer> indexFn = (rank, file) -> rank * 8 + file;
     Function<Integer, Integer> rowFn = index -> index / 8;
@@ -71,6 +73,24 @@ public interface Board {
         case 7 -> "H";
         default -> throw new IllegalStateException("Unexpected value: " + columnFn.apply(index));
     };
+
+    Function<String, Integer> columnToIndex = index -> switch (index) {
+        case "A" -> 0;
+        case "B" -> 1;
+        case "C" -> 2;
+        case "D" -> 3;
+        case "E" -> 4;
+        case "F" -> 5;
+        case "G" -> 6;
+        case "H" -> 7;
+        default -> throw new IllegalStateException("Unexpected value: " + index);
+    };
+
+    Function<T2<String, Integer>, T3> t2ToT3 = value ->
+            new T3(
+                    /*row*/    value.right(),
+                    /*column*/ columnToIndex.apply(value.left()),
+                    /*index*/  indexFn.apply(value.right(), columnToIndex.apply(value.left())));
 
     T3 a1 = of(0), b1 = of(1), c1 = of(2), d1 = of(3), e1 = of(4), f1 = of(5), g1 = of(6), h1 = of(7);
     T3 a2 = of(8), b2 = of(9), c2 = of(10), d2 = of(11), e2 = of(12), f2 = of(13), g2 = of(14), h2 = of(15);
