@@ -25,11 +25,14 @@ public class KingMoveGenerator implements Board, Chess {
         List<Integer> moves = new ArrayList<>();
 
         long kingBoard = color == 0 ? whitePieces[king] : blackPieces[king];
-        long allWhitePieces = whitePieces[0] | whitePieces[1] | whitePieces[2] | whitePieces[3] | whitePieces[4] | whitePieces[5];
-        long allBlackPieces = blackPieces[0] | blackPieces[1] | blackPieces[2] | blackPieces[3] | blackPieces[4] | blackPieces[5];
-        long friendlyPieces = color == 0 ? allWhitePieces : allBlackPieces;
+        long friendlyPieces = 0, enemyPieces = 0;
 
-        long allPieces = friendlyPieces | (color == 0 ? allBlackPieces : allWhitePieces);
+        for (int i = 0; i < 6; i++) {
+            friendlyPieces |= (color == 0 ? whitePieces[i] : blackPieces[i]);
+            enemyPieces |= (color == 0 ? blackPieces[i] : whitePieces[i]);
+        }
+
+        long allPieces = friendlyPieces | enemyPieces;
 
         int fromSquare = Long.numberOfTrailingZeros(kingBoard);
 
