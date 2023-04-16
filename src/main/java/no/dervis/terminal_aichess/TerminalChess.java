@@ -6,6 +6,7 @@ import no.dervis.terminal_aichess.moves.Generator;
 import no.dervis.terminal_aichess.moves.Move;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Scanner;
 
@@ -19,7 +20,7 @@ public class TerminalChess {
     public static void main(String[] args) {
         Bitboard board = new Bitboard();
         board.initialiseBoard();
-        Generator movegen = new Generator(board);
+        Generator generator = new Generator(board);
 
         System.out.println(Chess.boardToStr.apply(board, true));
         boolean status = true;
@@ -43,17 +44,18 @@ public class TerminalChess {
                 System.out.println("Quitting.");
                 status = false;
             } else {
-                List<Integer> moves = movegen.generateMoves(board.turn());
+                List<Integer> moves = generator.generateMoves(board.turn());
 
                 if (userTurn == board.turn()) {
-                    var t3T3T2 = parseMove(userInput);
-                    T2<Integer, Move> userMove = moves
+                    var parsedInput = parseMove(userInput);
+                    parsedInput.flatMap(parsedMove -> moves
                             .stream()
                             .map(move -> new T2<>(move, Move.createMove(move, board)))
-                            .filter(move -> move.right().fromSquare() == t3T3T2.left().index())
-                            .filter(move -> move.right().toSquare() == t3T3T2.right().index())
-                            .findFirst().orElseThrow();
-                    board.makeMove(userMove.left());
+                            .filter(t2 -> t2.right().fromSquare() == parsedMove.left().index())
+                            .filter(t2 -> t2.right().toSquare() == parsedMove.right().index())
+                            .findFirst())
+                            .ifPresentOrElse(legalUserMove -> board.makeMove(legalUserMove.left()),
+                                    () -> System.out.println("Please enter a legal move."));
                 } else {
                     int move = moves.get(new Random().nextInt(0, moves.size()));
                     board.makeMove(move);
@@ -64,16 +66,19 @@ public class TerminalChess {
         }
     }
 
-    private static T2<T3, T3> parseMove(String move) {
+    private static Optional<T2<T3, T3>> parseMove(String move) {
+        try {
+            String[] split = move.split("-");
+            String[] from = split[0].split("");
+            String[] to = split[1].split("");
 
-        String[] split = move.split("-");
-        String[] from = split[0].split("");
-        String[] to = split[1].split("");
+            T3 moveFrom = Board.t2ToT3.apply(new T2<>(from[0].toUpperCase(), Integer.parseInt(from[1])-1));
+            T3 moveTo = Board.t2ToT3.apply(new T2<>(to[0].toUpperCase(), Integer.parseInt(to[1])-1));
 
-        T3 moveFrom = Board.t2ToT3.apply(new T2<>(from[0].toUpperCase(), Integer.parseInt(from[1])-1));
-        T3 moveTo = Board.t2ToT3.apply(new T2<>(to[0].toUpperCase(), Integer.parseInt(to[1])-1));
-
-        return T2.of(moveFrom, moveTo);
+            return Optional.of(T2.of(moveFrom, moveTo));
+        } catch (Exception e) {
+            return Optional.empty();
+        }
     }
 
     private static String getMoveFromUser() {
