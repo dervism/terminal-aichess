@@ -20,10 +20,11 @@ public class PawnMoveGenerator implements Board {
         List<Integer> moves = new ArrayList<>();
 
         long pawns = color == 0 ? whitePieces[0] : blackPieces[0];
-        long emptySquares = ~(whitePieces[0] | whitePieces[1] | whitePieces[2] | whitePieces[3] | whitePieces[4] | whitePieces[5]
-                | blackPieces[0] | blackPieces[1] | blackPieces[2] | blackPieces[3] | blackPieces[4] | blackPieces[5]);
-        long opponentPieces = color == 0 ? blackPieces[0] | blackPieces[1] | blackPieces[2] | blackPieces[3] | blackPieces[4] | blackPieces[5]
-                : whitePieces[0] | whitePieces[1] | whitePieces[2] | whitePieces[3] | whitePieces[4] | whitePieces[5];
+        long emptySquares = ~0, enemyPieces = 0;
+        for (int i = 0; i < 6; i++) {
+            emptySquares &= ~(whitePieces[i] | blackPieces[i]);
+            enemyPieces |= (color == 0 ? blackPieces[i] : whitePieces[i]);
+        }
 
         // Generate single pawn moves
         long singleMoves = color == 0 ? (pawns << 8) & emptySquares : (pawns >>> 8) & emptySquares;
@@ -54,7 +55,7 @@ public class PawnMoveGenerator implements Board {
                 ? new long[]{(pawns << 7) & ~FILE_A, (pawns << 9) & ~FILE_H}
                 : new long[]{(pawns >>> 9) & ~FILE_A, (pawns >>> 7) & ~FILE_H};
         for (int direction = 0; direction < 2; direction++) {
-            long captures = pawnCaptures[direction] & opponentPieces;
+            long captures = pawnCaptures[direction] & enemyPieces;
             while (captures != 0) {
                 int toSquare = Long.numberOfTrailingZeros(captures);
                 int fromSquare = color == 0 ? toSquare - (direction == 0 ? 7 : 9) : toSquare + (direction == 0 ? 9 : 7);
