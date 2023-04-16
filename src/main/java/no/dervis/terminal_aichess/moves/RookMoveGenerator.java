@@ -46,8 +46,6 @@ public class RookMoveGenerator implements Board {
     }
 
     public static long rookAttacks(int square, long allPieces) {
-        long bitboard = 1L << square;
-
         long attacks = 0;
 
         // North
