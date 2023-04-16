@@ -3,10 +3,14 @@ package no.dervis.terminal_aichess;
 import no.dervis.terminal_aichess.Board.T2;
 import no.dervis.terminal_aichess.Board.T3;
 import no.dervis.terminal_aichess.moves.Generator;
+import no.dervis.terminal_aichess.moves.Move;
 
 import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
+
+import static no.dervis.terminal_aichess.Chess.black;
+import static no.dervis.terminal_aichess.Chess.white;
 
 public class TerminalChess {
 
@@ -20,23 +24,42 @@ public class TerminalChess {
         System.out.println(Chess.boardToStr.apply(board, true));
         boolean status = true;
 
+        System.out.print("Play white or black? (w/b)");
+        boolean userColor = scanner.nextLine().equalsIgnoreCase("w");
+        int userTurn = userColor ? white : black;
+
+        String userInput = "";
+
         while (status) {
-            String userMove = getMoveFromUser();
-            var t3T3T2 = parseMove(userMove);
+
+            if (userTurn == board.turn()) {
+                userInput = getMoveFromUser();
+            }
+
             clearTerminal();
 
-            if (userMove.equals("q")) {
+            if (userInput.equals("q")) {
                 scanner.close();
                 System.out.println("Quitting.");
                 status = false;
             } else {
                 List<Integer> moves = movegen.generateMoves(board.turn());
 
-                System.out.printf("Found %s moves.", moves.size()).println();
-                int move = moves.get(new Random().nextInt(0, moves.size()));
-                board.makeMove(move);
+                if (userTurn == board.turn()) {
+                    var t3T3T2 = parseMove(userInput);
+                    T2<Integer, Move> userMove = moves
+                            .stream()
+                            .map(move -> new T2<>(move, Move.createMove(move, board)))
+                            .filter(move -> move.right().fromSquare() == t3T3T2.left().index())
+                            .filter(move -> move.right().toSquare() == t3T3T2.right().index())
+                            .findFirst().orElseThrow();
+                    board.makeMove(userMove.left());
+                } else {
+                    int move = moves.get(new Random().nextInt(0, moves.size()));
+                    board.makeMove(move);
+                }
 
-                System.out.println(Chess.boardToStr.apply(board, true));
+                System.out.println(Chess.boardToStr.apply(board, userColor));
             }
         }
     }
