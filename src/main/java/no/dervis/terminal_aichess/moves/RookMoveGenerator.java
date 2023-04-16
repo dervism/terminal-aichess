@@ -20,10 +20,14 @@ public class RookMoveGenerator implements Board {
         List<Integer> moves = new ArrayList<>();
 
         long rooks = color == 0 ? whitePieces[3] : blackPieces[3];
-        long friendlyPieces = color == 0 ? whitePieces[0] | whitePieces[1] | whitePieces[2] | whitePieces[3] | whitePieces[4] | whitePieces[5]
-                : blackPieces[0] | blackPieces[1] | blackPieces[2] | blackPieces[3] | blackPieces[4] | blackPieces[5];
-        long allPieces = friendlyPieces | (color == 0 ? blackPieces[0] | blackPieces[1] | blackPieces[2] | blackPieces[3] | blackPieces[4] | blackPieces[5]
-                : whitePieces[0] | whitePieces[1] | whitePieces[2] | whitePieces[3] | whitePieces[4] | whitePieces[5]);
+        long friendlyPieces = 0, enemyPieces = 0;
+
+        for (int i = 0; i < 6; i++) {
+            friendlyPieces |= (color == 0 ? whitePieces[i] : blackPieces[i]);
+            enemyPieces |= (color == 0 ? blackPieces[i] : whitePieces[i]);
+        }
+
+        long allPieces = friendlyPieces | enemyPieces;
 
         while (rooks != 0) {
             int fromSquare = Long.numberOfTrailingZeros(rooks);
