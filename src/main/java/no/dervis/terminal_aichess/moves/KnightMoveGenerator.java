@@ -20,8 +20,11 @@ public class KnightMoveGenerator implements Board {
         List<Integer> moves = new ArrayList<>();
 
         long knights = color == 0 ? whitePieces[1] : blackPieces[1];
-        long friendlyPieces = color == 0 ? whitePieces[0] | whitePieces[1] | whitePieces[2] | whitePieces[3] | whitePieces[4] | whitePieces[5]
-                : blackPieces[0] | blackPieces[1] | blackPieces[2] | blackPieces[3] | blackPieces[4] | blackPieces[5];
+        long friendlyPieces = 0;
+
+        for (int i = 0; i < 6; i++) {
+            friendlyPieces |= (color == 0 ? whitePieces[i] : blackPieces[i]);
+        }
 
         while (knights != 0) {
             int fromSquare = Long.numberOfTrailingZeros(knights);
