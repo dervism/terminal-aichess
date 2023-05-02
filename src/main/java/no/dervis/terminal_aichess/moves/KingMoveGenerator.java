@@ -49,17 +49,29 @@ public class KingMoveGenerator implements Board, Chess {
 
         // Castling moves
         if (color == 0) {
-            if ((castlingRights & 0b0001) != 0 && (allPieces & 0b110_0000L) == 0 && fromSquare == e1.index() && (whitePieces[rook] & h1.index()) != 0) {
+            if ((castlingRights & 0b0001) != 0
+                    && (allPieces & 0b110_0000L) == 0
+                    && fromSquare == e1.index()
+                    && (whitePieces[rook] & (1L << h1.index())) != 0) {
                 moves.add((fromSquare << 14) | (fromSquare + 2 << 7) | (MoveType.CASTLE_KING_SIDE.ordinal() << 4));
             }
-            if ((castlingRights & 0b0010) != 0 && (allPieces & 0b1110L) == 0 && fromSquare == e1.index() && (whitePieces[rook] & a1.index()) != 0) {
+            if ((castlingRights & 0b0010) != 0
+                    && (allPieces & 0b1110L) == 0
+                    && fromSquare == e1.index()
+                    && (whitePieces[rook] & (1L << a1.index())) != 0) {
                 moves.add((fromSquare << 14) | (fromSquare - 2 << 7) | (MoveType.CASTLE_QUEEN_SIDE.ordinal() << 4));
             }
         } else {
-            if ((castlingRights & 0b0100) != 0 && (allPieces & 0x6000000000000000L) == 0 && fromSquare == e8.index() && (blackPieces[rook] & h8.index()) != 0) {
+            if ((castlingRights & 0b0100) != 0
+                    && (allPieces & 0x6000000000000000L) == 0
+                    && fromSquare == e8.index()
+                    && (blackPieces[rook] & (1L << h8.index())) != 0) {
                 moves.add((fromSquare << 14) | (fromSquare + 2 << 7) | (MoveType.CASTLE_KING_SIDE.ordinal() << 4));
             }
-            if ((castlingRights & 0b1000) != 0 && (allPieces & 0xe00000000000000L) == 0 && fromSquare == e8.index() && (blackPieces[rook] & a8.index()) != 0) {
+            if ((castlingRights & 0b1000) != 0
+                    && (allPieces & 0xe00000000000000L) == 0
+                    && fromSquare == e8.index()
+                    && (blackPieces[rook] & (1L << a8.index())) != 0) {
                 moves.add((fromSquare << 14) | (fromSquare - 2 << 7) | (MoveType.CASTLE_QUEEN_SIDE.ordinal() << 4));
             }
         }

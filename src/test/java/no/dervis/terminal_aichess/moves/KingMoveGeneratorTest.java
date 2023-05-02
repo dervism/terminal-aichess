@@ -12,6 +12,28 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class KingMoveGeneratorTest implements Board, Chess {
 
     @Test
+    void generateNoMovesStartingPosition() {
+        Bitboard board = new Bitboard();
+        board.initialiseBoard();
+
+        List<Board.T2<Integer, Move>> whiteKingMoves
+                = new KingMoveGenerator(board).generateKingMoves(white)
+                .stream()
+                .map(move -> new Board.T2<>(move, Move.createMove(move, board)))
+                //.peek(System.out::println)
+                .toList();
+        assertEquals(0, whiteKingMoves.size());
+
+        List<Board.T2<Integer, Move>> blackKingMoves
+                = new KingMoveGenerator(board).generateKingMoves(black)
+                .stream()
+                .map(move -> new Board.T2<>(move, Move.createMove(move, board)))
+                //.peek(System.out::println)
+                .toList();
+        assertEquals(0, blackKingMoves.size());
+    }
+
+    @Test
     void generateKingMoves() {
         Bitboard board = new Bitboard();
 
