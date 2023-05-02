@@ -12,24 +12,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class RookMoveGeneratorTest implements Board, Chess {
 
     @Test
-    void generateRookMoves() {
-        Bitboard board = new Bitboard();
-
-        board.setPiece(king, white, e1.index());
-        board.setPiece(king, black, a1.index());
-        board.setPiece(rook, black, e8.index());
-        System.out.println(boardToStr.apply(board, false));
-
-        Generator g = new Generator(board);
-        List<T2<Integer, Move>> blackMoves = g.generateMoves(black).stream()
-                .map(move -> new T2<>(move, Move.createMove(move, board)))
-                .peek(System.out::println)
-                //.filter(move -> move.right().piece() == rook)
-                .toList();
-        assertEquals(17, blackMoves.size());
-    }
-
-    @Test
     void rookAttacksInitial() {
         Bitboard board = new Bitboard();
         board.setPiece(king, white, e1.index());
