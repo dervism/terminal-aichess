@@ -1,15 +1,19 @@
 package no.dervis.terminal_aichess.moves;
 
+import no.dervis.terminal_aichess.Bitboard;
+import no.dervis.terminal_aichess.Board;
 import no.dervis.terminal_aichess.Chess;
 
-public class CheckHelper implements Chess {
+public class CheckHelper implements Board, Chess {
 
+    private final Bitboard board;
     private final long[] whitePieces;
     private final long[] blackPieces;
 
-    public CheckHelper(long[] whitePieces, long[] blackPieces) {
-        this.whitePieces = whitePieces;
-        this.blackPieces = blackPieces;
+    public CheckHelper(Bitboard board) {
+        this.board = board;
+        this.whitePieces = board.whitePieces();
+        this.blackPieces = board.blackPieces();
     }
 
     public boolean isKingInCheck(int color) {
@@ -18,36 +22,29 @@ public class CheckHelper implements Chess {
         long kingBitboard = color == 0 ? whitePieces[king] : blackPieces[king];
         int kingSquare = Long.numberOfTrailingZeros(kingBitboard);
 
-        return isSquareAttacked(kingSquare, opponentColor);
-    }
-
-    private boolean isSquareAttacked(int square, int color) {
-        if (isAttackedByPawns(square, color)) return true;
-        if (isAttackedByKnights(square, color)) return true;
-        if (isAttackedByBishops(square, color)) return true;
-        if (isAttackedByRooks(square, color)) return true;
-
-        return isAttackedByQueens(square, color);
-        // No need to check for king attacks since it's an invalid board state
-    }
-
-    private boolean isAttackedByPawns(int square, int color) {
         return false;
     }
 
-    private boolean isAttackedByKnights(int square, int color) {
-        return false;
+    public boolean isSquareAttackedByPawn(int square, int attackingColor) {
+        long attackBitboard = 0L;
+
+        if (attackingColor == 0) { // white pawns
+            if ((square - 7) >= 0 && (square % 8) != 0) {
+                attackBitboard |= 1L << (square - 7);
+            }
+            if ((square - 9) >= 0 && (square % 8) != 7) {
+                attackBitboard |= 1L << (square - 9);
+            }
+            return (attackBitboard & whitePieces[pawn]) != 0;
+        } else { // black pawns
+            if ((square + 7) < 64 && (square % 8) != 7) {
+                attackBitboard |= 1L << (square + 7);
+            }
+            if ((square + 9) < 64 && (square % 8) != 0) {
+                attackBitboard |= 1L << (square + 9);
+            }
+            return (attackBitboard & blackPieces[pawn]) != 0;
+        }
     }
 
-    private boolean isAttackedByBishops(int square, int color) {
-        return false;
-    }
-
-    private boolean isAttackedByRooks(int square, int color) {
-        return false;
-    }
-
-    private boolean isAttackedByQueens(int square, int color) {
-        return isAttackedByBishops(square, color) || isAttackedByRooks(square, color);
-    }
 }
