@@ -26,24 +26,31 @@ public class CheckHelper implements Board, Chess {
     }
 
     public boolean isSquareAttackedByPawn(int square, int attackingColor) {
-        long attackBitboard = 0L;
+        long attackedSquareBitboard = 1L << square;
+        long pawnAttacks = 0L;
 
         if (attackingColor == 0) { // white pawns
-            if ((square - 7) >= 0 && (square % 8) != 0) {
-                attackBitboard |= 1L << (square - 7);
+            if (square < 8) {
+                return false;
             }
-            if ((square - 9) >= 0 && (square % 8) != 7) {
-                attackBitboard |= 1L << (square - 9);
+            if ((square % 8) != 0) {
+                pawnAttacks |= attackedSquareBitboard >>> 9;
             }
-            return (attackBitboard & whitePieces[pawn]) != 0;
+            if ((square % 8) != 7) {
+                pawnAttacks |= attackedSquareBitboard >>> 7;
+            }
+            return (pawnAttacks & blackPieces[pawn]) != 0;
         } else { // black pawns
-            if ((square + 7) < 64 && (square % 8) != 7) {
-                attackBitboard |= 1L << (square + 7);
+            if (square >= 56) {
+                return false;
             }
-            if ((square + 9) < 64 && (square % 8) != 0) {
-                attackBitboard |= 1L << (square + 9);
+            if ((square % 8) != 0) {
+                pawnAttacks |= attackedSquareBitboard << 7;
             }
-            return (attackBitboard & blackPieces[pawn]) != 0;
+            if ((square % 8) != 7) {
+                pawnAttacks |= attackedSquareBitboard << 9;
+            }
+            return (pawnAttacks & whitePieces[pawn]) != 0;
         }
     }
 
