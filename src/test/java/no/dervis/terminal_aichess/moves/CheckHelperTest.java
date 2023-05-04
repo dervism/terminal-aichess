@@ -11,6 +11,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class CheckHelperTest  implements Board, Chess {
 
     @Test
+    void isSquareAttackedOnRank1() {
+        Bitboard board = new Bitboard();
+        CheckHelper checkHelper = new CheckHelper(board);
+
+        boolean reverse = false;
+
+        board.setPiece(knight, white, d1.index());
+        board.setPiece(pawn, black, e2.index());
+        System.out.println(boardToStr.apply(board, reverse));
+        assertTrue(checkHelper.isSquareAttackedByPawn(d1.index(), black));
+        assertTrue(checkHelper.isSquareAttackedByPawn(f1.index(), black));
+        assertFalse(checkHelper.isSquareAttackedByPawn(e1.index(), black));
+    }
+
+    @Test
     void isSquareAttackedByPawn() {
         Bitboard board = new Bitboard();
         CheckHelper checkHelper = new CheckHelper(board);
@@ -32,5 +47,11 @@ class CheckHelperTest  implements Board, Chess {
         board.setPiece(pawn, black, g5.index());
         System.out.println(boardToStr.apply(board, reverse));
         assertTrue(checkHelper.isSquareAttackedByPawn(h4.index(), black));
+
+        board.setPiece(pawn, white, a2.index());
+        board.setPiece(pawn, black, b3.index());
+        System.out.println(boardToStr.apply(board, reverse));
+        assertTrue(checkHelper.isSquareAttackedByPawn(a2.index(), black));
+        assertFalse(checkHelper.isSquareAttackedByPawn(a2.index(), white));
     }
 }

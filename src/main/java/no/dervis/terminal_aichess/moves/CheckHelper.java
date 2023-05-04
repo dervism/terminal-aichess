@@ -30,27 +30,21 @@ public class CheckHelper implements Board, Chess {
         long pawnAttacks = 0L;
 
         if (attackingColor == 0) { // white pawns
-            if (square < 8) {
-                return false;
-            }
             if ((square % 8) != 0) {
                 pawnAttacks |= attackedSquareBitboard >>> 9;
             }
             if ((square % 8) != 7) {
                 pawnAttacks |= attackedSquareBitboard >>> 7;
             }
-            return (pawnAttacks & blackPieces[pawn]) != 0;
+            return (pawnAttacks & whitePieces[pawn]) != 0;
         } else { // black pawns
-            if (square >= 56) {
-                return false;
-            }
             if ((square % 8) != 0) {
                 pawnAttacks |= attackedSquareBitboard << 7;
             }
             if ((square % 8) != 7) {
                 pawnAttacks |= attackedSquareBitboard << 9;
             }
-            return (pawnAttacks & whitePieces[pawn]) != 0;
+            return (pawnAttacks & blackPieces[pawn]) != 0;
         }
     }
 
