@@ -26,7 +26,39 @@ class CheckHelperTest  implements Board, Chess {
     }
 
     @Test
-    void isSquareAttackedByPawn() {
+    void isSquareAttackedOnFile1() {
+        Bitboard board = new Bitboard();
+        CheckHelper checkHelper = new CheckHelper(board);
+
+        boolean reverse = false;
+
+        board.setPiece(pawn, white, a4.index());
+        board.setPiece(pawn, black, b5.index());
+        System.out.println(boardToStr.apply(board, reverse));
+        assertTrue(checkHelper.isSquareAttackedByPawn(a4.index(), black));
+
+        board.setPiece(pawn, white, a2.index());
+        board.setPiece(pawn, black, b3.index());
+        System.out.println(boardToStr.apply(board, reverse));
+        assertTrue(checkHelper.isSquareAttackedByPawn(a2.index(), black));
+        assertFalse(checkHelper.isSquareAttackedByPawn(a2.index(), white));
+    }
+
+    @Test
+    void isSquareAttackedOnFile8() {
+        Bitboard board = new Bitboard();
+        CheckHelper checkHelper = new CheckHelper(board);
+
+        boolean reverse = false;
+
+        board.setPiece(pawn, white, h4.index());
+        board.setPiece(pawn, black, g5.index());
+        System.out.println(boardToStr.apply(board, reverse));
+        assertTrue(checkHelper.isSquareAttackedByPawn(h4.index(), black));
+    }
+
+    @Test
+    void isSquareAttackedByCenterPawn() {
         Bitboard board = new Bitboard();
         CheckHelper checkHelper = new CheckHelper(board);
 
@@ -37,21 +69,5 @@ class CheckHelperTest  implements Board, Chess {
         System.out.println(boardToStr.apply(board, reverse));
         assertTrue(checkHelper.isSquareAttackedByPawn(e4.index(), black));
         assertFalse(checkHelper.isSquareAttackedByPawn(e4.index(), white));
-
-        board.setPiece(pawn, white, a4.index());
-        board.setPiece(pawn, black, b5.index());
-        System.out.println(boardToStr.apply(board, reverse));
-        assertTrue(checkHelper.isSquareAttackedByPawn(a4.index(), black));
-
-        board.setPiece(pawn, white, h4.index());
-        board.setPiece(pawn, black, g5.index());
-        System.out.println(boardToStr.apply(board, reverse));
-        assertTrue(checkHelper.isSquareAttackedByPawn(h4.index(), black));
-
-        board.setPiece(pawn, white, a2.index());
-        board.setPiece(pawn, black, b3.index());
-        System.out.println(boardToStr.apply(board, reverse));
-        assertTrue(checkHelper.isSquareAttackedByPawn(a2.index(), black));
-        assertFalse(checkHelper.isSquareAttackedByPawn(a2.index(), white));
     }
 }

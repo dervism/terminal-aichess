@@ -29,7 +29,7 @@ public class CheckHelper implements Board, Chess {
         long attackedSquareBitboard = 1L << square;
         long pawnAttacks = 0L;
 
-        if (attackingColor == 0) { // white pawns
+        if (attackingColor == white) { // white pawns
             if ((square % 8) != 0) {
                 pawnAttacks |= attackedSquareBitboard >>> 9;
             }
