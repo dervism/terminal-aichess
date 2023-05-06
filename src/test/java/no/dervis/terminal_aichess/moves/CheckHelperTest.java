@@ -13,6 +13,22 @@ class CheckHelperTest  implements Board, Chess {
     private boolean reverse = false;
 
     @Test
+    void isSquareAttackedKnight() {
+        Bitboard board = new Bitboard();
+        CheckHelper checkHelper = new CheckHelper(board);
+
+        board.setPiece(pawn, white, e4.index());
+        board.setPiece(knight, black, c5.index());
+        System.out.println(boardToStr.apply(board, reverse));
+        assertTrue(checkHelper.isSquareAttackedByKnight(e4.index(), black));
+
+        board.setPiece(pawn, black, h4.index());
+        board.setPiece(knight, white, f5.index());
+        System.out.println(boardToStr.apply(board, reverse));
+        assertTrue(checkHelper.isSquareAttackedByKnight(h4.index(), white));
+    }
+
+    @Test
     void isSquareAttackedOnRank1() {
         Bitboard board = new Bitboard();
         CheckHelper checkHelper = new CheckHelper(board);
