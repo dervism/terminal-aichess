@@ -69,5 +69,13 @@ class CheckHelperTest  implements Board, Chess {
         System.out.println(boardToStr.apply(board, reverse));
         assertTrue(checkHelper.isSquareAttackedByPawn(e4.index(), black));
         assertFalse(checkHelper.isSquareAttackedByPawn(e4.index(), white));
+
+        board.setPiece(pawn, black, d5.index());
+        board.setPiece(pawn, white, c4.index());
+        System.out.println(boardToStr.apply(board, reverse));
+        assertTrue(checkHelper.isSquareAttackedByPawn(d5.index(), white));
+        assertTrue(checkHelper.isSquareAttackedByPawn(e4.index(), black));
+        assertFalse(checkHelper.isSquareAttackedByPawn(d5.index(), black));
+        assertTrue(checkHelper.isSquareAttackedByPawn(d5.index(), white));
     }
 }
