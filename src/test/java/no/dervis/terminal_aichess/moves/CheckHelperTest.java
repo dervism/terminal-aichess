@@ -10,6 +10,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CheckHelperTest  implements Board, Chess {
 
+    private boolean reverse = false;
+
     @Test
     void isSquareAttackedOnRank1() {
         Bitboard board = new Bitboard();
@@ -30,8 +32,6 @@ class CheckHelperTest  implements Board, Chess {
         Bitboard board = new Bitboard();
         CheckHelper checkHelper = new CheckHelper(board);
 
-        boolean reverse = false;
-
         board.setPiece(pawn, white, a4.index());
         board.setPiece(pawn, black, b5.index());
         System.out.println(boardToStr.apply(board, reverse));
@@ -49,8 +49,6 @@ class CheckHelperTest  implements Board, Chess {
         Bitboard board = new Bitboard();
         CheckHelper checkHelper = new CheckHelper(board);
 
-        boolean reverse = false;
-
         board.setPiece(pawn, white, h4.index());
         board.setPiece(pawn, black, g5.index());
         System.out.println(boardToStr.apply(board, reverse));
@@ -61,8 +59,6 @@ class CheckHelperTest  implements Board, Chess {
     void isSquareAttackedByCenterPawn() {
         Bitboard board = new Bitboard();
         CheckHelper checkHelper = new CheckHelper(board);
-
-        boolean reverse = false;
 
         board.setPiece(pawn, white, e4.index());
         board.setPiece(pawn, black, d5.index());
