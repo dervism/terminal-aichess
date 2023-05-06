@@ -44,16 +44,18 @@ public class KnightMoveGenerator implements Board {
 
     private long knightAttacks(int square) {
         long bitboard = 1L << square;
+        long attacks = 0L;
 
-        long attacks = (bitboard << 17) & ~FILE_A;
-        attacks |= (bitboard << 10) & ~FILE_A & ~FILE_B;
+        // Compute knight attacks
+        attacks = (bitboard >>> 15) & ~FILE_A;
         attacks |= (bitboard >>> 6) & ~FILE_A & ~FILE_B;
-        attacks |= (bitboard >>> 15) & ~FILE_A;
+        attacks |= (bitboard >>> 17) & ~FILE_H;
+        attacks |= (bitboard >>> 10) & ~FILE_G & ~FILE_H;
 
+        attacks |= (bitboard << 17) & ~FILE_A;
+        attacks |= (bitboard << 10) & ~FILE_A & ~FILE_B;
         attacks |= (bitboard << 15) & ~FILE_H;
         attacks |= (bitboard << 6) & ~FILE_G & ~FILE_H;
-        attacks |= (bitboard >>> 10) & ~FILE_G & ~FILE_H;
-        attacks |= (bitboard >>> 17) & ~FILE_H;
 
         return attacks;
     }
