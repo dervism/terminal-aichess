@@ -17,15 +17,50 @@ class CheckHelperTest  implements Board, Chess {
         Bitboard board = new Bitboard();
         CheckHelper checkHelper = new CheckHelper(board);
 
+        // south (west)
+        board.setPiece(rook, white, f8.index());
+        board.setPiece(knight, black, e6.index());
+        System.out.println(boardToStr.apply(board, reverse));
+        assertTrue(checkHelper.isSquareAttackedByKnight(f8.index(), black));
+
+        // west-south
         board.setPiece(pawn, white, e4.index());
-        board.setPiece(knight, black, c5.index());
+        board.setPiece(knight, black, c3.index());
         System.out.println(boardToStr.apply(board, reverse));
         assertTrue(checkHelper.isSquareAttackedByKnight(e4.index(), black));
 
+        // west
+        board.setPiece(pawn, white, a4.index());
+        board.setPiece(knight, black, c3.index());
+        System.out.println(boardToStr.apply(board, reverse));
+        assertTrue(checkHelper.isSquareAttackedByKnight(a4.index(), black));
+
+        // north (west)
         board.setPiece(pawn, black, h4.index());
-        board.setPiece(knight, white, f5.index());
+        board.setPiece(knight, white, g6.index());
         System.out.println(boardToStr.apply(board, reverse));
         assertTrue(checkHelper.isSquareAttackedByKnight(h4.index(), white));
+
+        // north (east)
+        board.setPiece(knight, white, b4.index());
+        board.setPiece(knight, black, c6.index());
+        System.out.println(boardToStr.apply(board, reverse));
+        assertTrue(checkHelper.isSquareAttackedByKnight(b4.index(), black));
+
+        // east-south
+        board.setPiece(bishop, white, g5.index());
+        System.out.println(boardToStr.apply(board, reverse));
+        assertTrue(checkHelper.isSquareAttackedByKnight(g5.index(), black));
+
+        // east-north
+        board.setPiece(pawn, white, g7.index());
+        System.out.println(boardToStr.apply(board, reverse));
+        assertTrue(checkHelper.isSquareAttackedByKnight(g7.index(), black));
+
+        // south (east)
+        board.setPiece(pawn, white, d4.index());
+        System.out.println(boardToStr.apply(board, reverse));
+        assertTrue(checkHelper.isSquareAttackedByKnight(d4.index(), black));
     }
 
     @Test
