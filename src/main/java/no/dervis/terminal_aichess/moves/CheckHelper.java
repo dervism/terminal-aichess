@@ -48,4 +48,25 @@ public class CheckHelper implements Board, Chess {
         }
     }
 
+    public boolean isSquareAttackedByKnight(int square, int attackingColor) {
+        long attackedSquareBitboard = 1L << square;
+        long[] attackingKnights = attackingColor == 0 ? whitePieces : blackPieces;
+        long knightAttacks = 0L;
+
+        // Compute knight attacks for the given square
+        knightAttacks |= (attackedSquareBitboard & ~FILE_A) << 15;
+        knightAttacks |= (attackedSquareBitboard & ~FILE_A & ~FILE_B) << 6;
+        knightAttacks |= (attackedSquareBitboard & ~FILE_H) << 17;
+        knightAttacks |= (attackedSquareBitboard & ~FILE_H & ~FILE_G) << 10;
+
+        knightAttacks |= (attackedSquareBitboard & ~FILE_A) >>> 17;
+        knightAttacks |= (attackedSquareBitboard & ~FILE_A & ~FILE_B) >>> 10;
+        knightAttacks |= (attackedSquareBitboard & ~FILE_H) >>> 15;
+        knightAttacks |= (attackedSquareBitboard & ~FILE_H & ~FILE_G) >>> 6;
+
+        // Check if any of the attacking knights can attack the given square
+        return (knightAttacks & attackingKnights[knight]) != 0;
+    }
+
+
 }
