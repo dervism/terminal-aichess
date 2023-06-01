@@ -205,5 +205,16 @@ public class Bitboard implements Board, Chess {
     public int turn() {
         return colorToMove;
     }
+
+    public long allPieces() {
+        long friendlyPieces = 0, enemyPieces = 0;
+
+        for (int i = 0; i < 6; i++) {
+            friendlyPieces |= (turn() == 0 ? whitePieces[i] : blackPieces[i]);
+            enemyPieces |= (turn() == 0 ? blackPieces[i] : whitePieces[i]);
+        }
+
+        return friendlyPieces | enemyPieces;
+    }
 }
 
