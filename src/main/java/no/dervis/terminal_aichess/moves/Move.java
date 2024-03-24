@@ -1,7 +1,7 @@
 package no.dervis.terminal_aichess.moves;
 
 import no.dervis.terminal_aichess.Bitboard;
-import no.dervis.terminal_aichess.Board.T3;
+import no.dervis.terminal_aichess.Board.Tuple3;
 import no.dervis.terminal_aichess.Chess;
 
 public record Move(
@@ -78,7 +78,7 @@ public record Move(
         );
     }
 
-    public static int createMove(T3 from, T3 to) {
+    public static int createMove(Tuple3 from, Tuple3 to) {
         return (from.index() << 14) | (to.index() << 7);
     }
 

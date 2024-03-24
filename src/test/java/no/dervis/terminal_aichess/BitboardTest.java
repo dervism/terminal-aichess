@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class BitboardTest implements Board, Chess {
 
-    private final Predicate<T2<Integer, Move>> onlyCastlingMoves = move -> move.right().moveType() == MoveType.CASTLE_KING_SIDE.ordinal()
+    private final Predicate<Tuple2<Integer, Move>> onlyCastlingMoves = move -> move.right().moveType() == MoveType.CASTLE_KING_SIDE.ordinal()
             || move.right().moveType() == MoveType.CASTLE_QUEEN_SIDE.ordinal();
 
     @Test
@@ -87,7 +87,7 @@ class BitboardTest implements Board, Chess {
         Bitboard board = new Bitboard();
         board.initialiseBoard();
 
-        for (T3 pawnSquare : rank2) {
+        for (Tuple3 pawnSquare : rank2) {
             assertEquals(pawn, board.getPiece(pawnSquare.index()));
         }
         assertEquals(knight, board.getPiece(b1.index()));
@@ -99,7 +99,7 @@ class BitboardTest implements Board, Chess {
         assertEquals(queen, board.getPiece(d1.index()));
         assertEquals(king, board.getPiece(e1.index()));
 
-        for (T3 pawnSquare : rank7) {
+        for (Tuple3 pawnSquare : rank7) {
             System.out.println(pawnSquare.index() + "=" + board.getPiece(pawnSquare.index()));
             assertEquals(bpawn, board.getPiece(pawnSquare.index()));
         }
@@ -121,42 +121,42 @@ class BitboardTest implements Board, Chess {
 
         // initial white pawn moves, 1 and 2 squares forward
         Bitboard wPawnMovesBoard = board.copy();
-        List<T2<Integer, Move>> pawnMovesWhite1 = new LinkedList<>();
-        for (T3 pawnSquare : rank2) {
+        List<Tuple2<Integer, Move>> pawnMovesWhite1 = new LinkedList<>();
+        for (Tuple3 pawnSquare : rank2) {
             int move = (pawnSquare.index() << 14) | (pawnSquare.index() + 8 << 7);
-            pawnMovesWhite1.add(new T2<>(move, Move.createMove(move, board)));
+            pawnMovesWhite1.add(new Tuple2<>(move, Move.createMove(move, board)));
             wPawnMovesBoard.makeMove(move);
             assertEquals(pawn, wPawnMovesBoard.getPiece(pawnSquare.index() + 8));
             assertEquals(empty, wPawnMovesBoard.getPiece(pawnSquare.index()));
         }
 
         Bitboard wPawnMovesBoard2 = board.copy();
-        List<T2<Integer, Move>> pawnMovesWhite2 = new LinkedList<>();
-        for (T3 pawnSquare : rank2) {
+        List<Tuple2<Integer, Move>> pawnMovesWhite2 = new LinkedList<>();
+        for (Tuple3 pawnSquare : rank2) {
             int move = (pawnSquare.index() << 14) | (pawnSquare.index() + 16 << 7);
             wPawnMovesBoard2.makeMove(move);
-            pawnMovesWhite2.add(new T2<>(move, Move.createMove(move, board)));
+            pawnMovesWhite2.add(new Tuple2<>(move, Move.createMove(move, board)));
             assertEquals(pawn, wPawnMovesBoard2.getPiece(pawnSquare.index() + 16));
             assertEquals(empty, wPawnMovesBoard2.getPiece(pawnSquare.index()));
         }
 
         // initial black pawn moves, 1 and 2 squares forward
         Bitboard bPawnMovesBoard = board.copy();
-        List<T2<Integer, Move>> pawnMovesBlack1 = new LinkedList<>();
-        for (T3 pawnSquare : rank7) {
+        List<Tuple2<Integer, Move>> pawnMovesBlack1 = new LinkedList<>();
+        for (Tuple3 pawnSquare : rank7) {
             int move = (pawnSquare.index() << 14) | (pawnSquare.index() - 8 << 7);
-            pawnMovesBlack1.add(new T2<>(move, Move.createMove(move, board)));
+            pawnMovesBlack1.add(new Tuple2<>(move, Move.createMove(move, board)));
             bPawnMovesBoard.makeMove(move);
             assertEquals(bpawn, bPawnMovesBoard.getPiece(pawnSquare.index() - 8));
             assertEquals(empty, bPawnMovesBoard.getPiece(pawnSquare.index()));
         }
 
         Bitboard bPawnMovesBoard2 = board.copy();
-        List<T2<Integer, Move>> pawnMovesBlack2 = new LinkedList<>();
-        for (T3 pawnSquare : rank7) {
+        List<Tuple2<Integer, Move>> pawnMovesBlack2 = new LinkedList<>();
+        for (Tuple3 pawnSquare : rank7) {
             int move = (pawnSquare.index() << 14) | (pawnSquare.index() - 16 << 7);
             bPawnMovesBoard2.makeMove(move);
-            pawnMovesBlack2.add(new T2<>(move, Move.createMove(move, board)));
+            pawnMovesBlack2.add(new Tuple2<>(move, Move.createMove(move, board)));
             assertEquals(bpawn, bPawnMovesBoard2.getPiece(pawnSquare.index() - 16));
             assertEquals(empty, bPawnMovesBoard2.getPiece(pawnSquare.index()));
         }
@@ -173,8 +173,8 @@ class BitboardTest implements Board, Chess {
         System.out.println(printBoard.apply(whitePawnABMoves));
 
         Generator g = new Generator(whitePawnABMoves);
-        List<T2<Integer, Move>> movesAB = g.generateMoves(black).stream()
-                .map(move -> new T2<>(move, Move.createMove(move, whitePawnABMoves)))
+        List<Tuple2<Integer, Move>> movesAB = g.generateMoves(black).stream()
+                .map(move -> new Tuple2<>(move, Move.createMove(move, whitePawnABMoves)))
                 .toList();
 
         assertEquals(1, movesAB.stream().filter(m -> m.right().moveType() == MoveType.EN_PASSANT.ordinal()).toList().size());
@@ -184,8 +184,8 @@ class BitboardTest implements Board, Chess {
         whitePawnHGMoves.makeMove(h2, h4);
         System.out.println(printBoard.apply(whitePawnHGMoves));
 
-        List<T2<Integer, Move>> movesHG = g.generateMoves(black).stream()
-                .map(move -> new T2<>(move, Move.createMove(move, whitePawnHGMoves)))
+        List<Tuple2<Integer, Move>> movesHG = g.generateMoves(black).stream()
+                .map(move -> new Tuple2<>(move, Move.createMove(move, whitePawnHGMoves)))
                 .toList();
         assertEquals(1, movesHG.stream().filter(m -> m.right().moveType() == MoveType.EN_PASSANT.ordinal()).toList().size());
     }
@@ -203,12 +203,12 @@ class BitboardTest implements Board, Chess {
         System.out.println(printBoard.apply(board));
 
         Generator g = new Generator(board);
-        List<T2<Integer, Move>> moves = g.generateMoves(white).stream()
-                .map(move -> new T2<>(move, Move.createMove(move, board)))
+        List<Tuple2<Integer, Move>> moves = g.generateMoves(white).stream()
+                .map(move -> new Tuple2<>(move, Move.createMove(move, board)))
                 .toList();
         assertEquals(26, moves.size());
 
-        List<T2<Integer, Move>> castleMoves = moves
+        List<Tuple2<Integer, Move>> castleMoves = moves
                 .stream()
                 .filter(onlyCastlingMoves).toList();
         assertEquals(2, castleMoves.size());
@@ -247,13 +247,13 @@ class BitboardTest implements Board, Chess {
         System.out.println(boardToStr.apply(board, false));
 
         Generator g = new Generator(board);
-        List<T2<Integer, Move>> moves = g.generateMoves(black).stream()
-                .map(move -> new T2<>(move, Move.createMove(move, board)))
+        List<Tuple2<Integer, Move>> moves = g.generateMoves(black).stream()
+                .map(move -> new Tuple2<>(move, Move.createMove(move, board)))
                 .peek(System.out::println)
                 .toList();
         assertEquals(26, moves.size());
 
-        List<T2<Integer, Move>> castleMoves = moves
+        List<Tuple2<Integer, Move>> castleMoves = moves
                 .stream()
                 .filter(onlyCastlingMoves).toList();
         assertEquals(2, castleMoves.size());
@@ -311,14 +311,14 @@ class BitboardTest implements Board, Chess {
 
         // when all officers are in place, no castling moves should be generated
         Generator g = new Generator(board);
-        List<T2<Integer, Move>> whiteMoves = g.generateMoves(white).stream()
-                .map(move -> new T2<>(move, Move.createMove(move, board)))
+        List<Tuple2<Integer, Move>> whiteMoves = g.generateMoves(white).stream()
+                .map(move -> new Tuple2<>(move, Move.createMove(move, board)))
                 .filter(onlyCastlingMoves)
                 .toList();
         assertEquals(0, whiteMoves.size());
 
-        List<T2<Integer, Move>> blackMoves = g.generateMoves(black).stream()
-                .map(move -> new T2<>(move, Move.createMove(move, board)))
+        List<Tuple2<Integer, Move>> blackMoves = g.generateMoves(black).stream()
+                .map(move -> new Tuple2<>(move, Move.createMove(move, board)))
                 .filter(onlyCastlingMoves)
                 .toList();
         assertEquals(0, blackMoves.size());
@@ -328,8 +328,8 @@ class BitboardTest implements Board, Chess {
         board.removePiece(bishop, white, c1.index());
         board.removePiece(queen, white, d1.index());
 
-        List<T2<Integer, Move>> queensideCastleMove = g.generateMoves(white).stream()
-                .map(move -> new T2<>(move, Move.createMove(move, board)))
+        List<Tuple2<Integer, Move>> queensideCastleMove = g.generateMoves(white).stream()
+                .map(move -> new Tuple2<>(move, Move.createMove(move, board)))
                 .filter(onlyCastlingMoves)
                 .toList();
         assertEquals(1, queensideCastleMove.size());
@@ -340,8 +340,8 @@ class BitboardTest implements Board, Chess {
         board.removePiece(queen, black, d8.index());
         System.out.println(boardToStr.apply(board, false));
 
-        List<T2<Integer, Move>> queensideCastleMoveBlack = g.generateMoves(black).stream()
-                .map(move -> new T2<>(move, Move.createMove(move, board)))
+        List<Tuple2<Integer, Move>> queensideCastleMoveBlack = g.generateMoves(black).stream()
+                .map(move -> new Tuple2<>(move, Move.createMove(move, board)))
                 .filter(onlyCastlingMoves)
                 .toList();
         assertEquals(1, queensideCastleMoveBlack.size());

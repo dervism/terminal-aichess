@@ -68,5 +68,17 @@ public class CheckHelper implements Board, Chess {
         return (knightAttacks & attackingKnights[knight]) != 0;
     }
 
+    public boolean isSquareAttackedByBishop(int square, int attackingColor) {
+        long attackedSquareBitboard = 1L << square;
+        long[] attackingBishops = attackingColor == 0 ? whitePieces : blackPieces;
+        long bishopAttacks = 0L;
+
+        // compute bishop attacks for square
+
+
+        // check if any of the attacking bishops can attack the given square
+        return (bishopAttacks & attackingBishops[bishop]) != 0;
+    }
+
 
 }

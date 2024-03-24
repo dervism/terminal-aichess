@@ -1,8 +1,8 @@
 # Terminal AI-Chess
 
-Simple Java 20 chess app that uses bitboards. This implementation is mainly for learning the bitboard data-structure. It amazes me how effective and compact this format is, even though it's hard to correctly implement bit-shifting and bit-masking.
+Simple Java 22 chess app that uses bitboards. This implementation is mainly for learning the bitboard data-structure. It amazes me how effective and compact this format is, even though it's hard to correctly implement bit-shifting and bit-masking.
 
-PS: This is still work in progress. The app will only responde with random moves at the moment.
+PS: This is still work in progress. The app will only respond with random moves at the moment.
 
 In your terminal, this is how the app will look like.
 

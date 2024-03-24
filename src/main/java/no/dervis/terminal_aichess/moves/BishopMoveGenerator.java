@@ -11,6 +11,14 @@ public class BishopMoveGenerator implements Board {
     private final long[] whitePieces;
     private final long[] blackPieces;
 
+    private static final int BOARD_SIZE = 64;
+    private static final int NORTH_EAST = 9;
+    private static final int NORTH_WEST = 7;
+    private static final int SOUTH_EAST = -7;
+    private static final int SOUTH_WEST = -9;
+    private static final int RIGHT_EDGE = 0;
+    private static final int LEFT_EDGE = 7;
+
     public BishopMoveGenerator(Bitboard board) {
         this.whitePieces = board.whitePieces();
         this.blackPieces = board.blackPieces();
@@ -48,39 +56,29 @@ public class BishopMoveGenerator implements Board {
     public static long bishopAttacks(int square, long allPieces) {
         long attacks = 0;
 
-        // North-East
-        for (int i = square + 9; i < 64 && i % 8 != 0; i += 9) {
-            attacks |= 1L << i;
-            if ((allPieces & (1L << i)) != 0) {
-                break;
-            }
-        }
-
-        // North-West
-        for (int i = square + 7; i < 64 && i % 8 != 7; i += 7) {
-            attacks |= 1L << i;
-            if ((allPieces & (1L << i)) != 0) {
-                break;
-            }
-        }
-
-        // South-East
-        for (int i = square - 7; i >= 0 && i % 8 != 0; i -= 7) {
-            attacks |= 1L << i;
-            if ((allPieces & (1L << i)) != 0) {
-                break;
-            }
-        }
-
-        // South-West
-        for (int i = square - 9; i >= 0 && i % 8 != 7; i -= 9) {
-            attacks |= 1L << i;
-            if ((allPieces & (1L << i)) != 0) {
-                break;
-            }
-        }
+        attacks |= calculateAttacksInDirection(square, allPieces, NORTH_EAST, RIGHT_EDGE);
+        attacks |= calculateAttacksInDirection(square, allPieces, NORTH_WEST, LEFT_EDGE);
+        attacks |= calculateAttacksInDirection(square, allPieces, SOUTH_EAST, RIGHT_EDGE);
+        attacks |= calculateAttacksInDirection(square, allPieces, SOUTH_WEST, LEFT_EDGE);
 
         return attacks;
+    }
+
+    private static long calculateAttacksInDirection(int square, long allPieces, int direction, int edge) {
+        long attacks = 0;
+        for (int i = square + direction;
+             isWithinBoardLimit(i) && i % 8 != edge;
+             i += direction) {
+            attacks |= 1L << i;
+            if ((allPieces & (1L << i)) != 0) {
+                break;
+            }
+        }
+        return attacks;
+    }
+
+    private static boolean isWithinBoardLimit(int square){
+        return square >= 0 && square < BOARD_SIZE;
     }
 
 }

@@ -42,8 +42,8 @@ class RookMoveGeneratorTest implements Board, Chess {
         System.out.println(boardToStr.apply(board, false));
 
         Generator g = new Generator(board);
-        List<T2<Integer, Move>> whiteMoves = g.generateMoves(white).stream()
-                .map(move -> new T2<>(move, Move.createMove(move, board)))
+        List<Tuple2<Integer, Move>> whiteMoves = g.generateMoves(white).stream()
+                .map(move -> new Tuple2<>(move, Move.createMove(move, board)))
                 .filter(move -> move.right().piece() == rook)
                 .toList();
         assertEquals(14, whiteMoves.size());

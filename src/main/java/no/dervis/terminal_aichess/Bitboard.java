@@ -90,7 +90,7 @@ public class Bitboard implements Board, Chess {
         return -1; // No piece at the given square
     }
 
-    public void makeMove(T3 from, T3 to) {
+    public void makeMove(Tuple3 from, Tuple3 to) {
         makeMove(Move.createMove(from, to));
     }
 

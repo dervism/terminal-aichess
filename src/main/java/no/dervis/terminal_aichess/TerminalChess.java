@@ -1,7 +1,7 @@
 package no.dervis.terminal_aichess;
 
-import no.dervis.terminal_aichess.Board.T2;
-import no.dervis.terminal_aichess.Board.T3;
+import no.dervis.terminal_aichess.Board.Tuple2;
+import no.dervis.terminal_aichess.Board.Tuple3;
 import no.dervis.terminal_aichess.moves.Generator;
 import no.dervis.terminal_aichess.moves.Move;
 
@@ -50,7 +50,7 @@ public class TerminalChess {
                     var parsedInput = parseMove(userInput);
                     parsedInput.flatMap(parsedMove -> moves
                             .stream()
-                            .map(move -> new T2<>(move, Move.createMove(move, board)))
+                            .map(move -> new Tuple2<>(move, Move.createMove(move, board)))
                             .filter(t2 -> t2.right().fromSquare() == parsedMove.left().index())
                             .filter(t2 -> t2.right().toSquare() == parsedMove.right().index())
                             .findFirst())
@@ -66,16 +66,16 @@ public class TerminalChess {
         }
     }
 
-    private static Optional<T2<T3, T3>> parseMove(String move) {
+    private static Optional<Tuple2<Tuple3, Tuple3>> parseMove(String move) {
         try {
             String[] split = move.split("-");
             String[] from = split[0].split("");
             String[] to = split[1].split("");
 
-            T3 moveFrom = Board.t2ToT3.apply(new T2<>(from[0].toUpperCase(), Integer.parseInt(from[1])-1));
-            T3 moveTo = Board.t2ToT3.apply(new T2<>(to[0].toUpperCase(), Integer.parseInt(to[1])-1));
+            Tuple3 moveFrom = Board.t2ToT3.apply(new Tuple2<>(from[0].toUpperCase(), Integer.parseInt(from[1])-1));
+            Tuple3 moveTo = Board.t2ToT3.apply(new Tuple2<>(to[0].toUpperCase(), Integer.parseInt(to[1])-1));
 
-            return Optional.of(T2.of(moveFrom, moveTo));
+            return Optional.of(Tuple2.of(moveFrom, moveTo));
         } catch (Exception e) {
             return Optional.empty();
         }

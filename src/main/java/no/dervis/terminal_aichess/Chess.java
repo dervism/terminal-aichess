@@ -44,7 +44,7 @@ public interface Chess {
         case bqueen -> " ♛ ";
         case bking -> " ♚ ";
         case empty -> "   ";
-        default -> throw new IllegalStateException("Unexpected value: " + pieceType);
+        default -> throw new IllegalStateException(STR."Unexpected value: \{pieceType}");
     };
 
     BiFunction<Bitboard, Boolean, StringBuilder> boardToStr = (board, reverse) -> {
@@ -56,7 +56,7 @@ public interface Chess {
                             .mapToObj(col -> {
                                 String square = pieceToStr.apply(board.getPiece( board.indexFn.apply(row, col)));
                                 if ((row + col) % 2 == 0) {
-                                    return "\u001B[47m" + square + "\u001B[0m";
+                                    return STR."\u001B[47m\{square}\u001B[0m";
                                 } else {
                                     return square;
                                 }

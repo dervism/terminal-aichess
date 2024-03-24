@@ -9,7 +9,7 @@
   <packaging>jar</packaging>
 
   <properties>
-    <java.version>20</java.version>
+    <java.version>22</java.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>${java.version}</maven.compiler.source>
     <maven.compiler.target>${java.version}</maven.compiler.target>
@@ -20,8 +20,13 @@
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
-      <version>5.9.2</version>
+      <version>5.10.1</version>
     </dependency>
+      <dependency>
+          <groupId>com.jnape.palatable</groupId>
+          <artifactId>lambda</artifactId>
+          <version>5.5.0</version>
+      </dependency>
   </dependencies>
 
   <build>
@@ -54,5 +59,4 @@
           </plugin>
       </plugins>
   </build>
-
 </project>
