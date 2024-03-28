@@ -1,18 +1,17 @@
 package no.dervis.terminal_aichess;
 
 import java.util.AbstractMap.SimpleImmutableEntry;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static no.dervis.terminal_aichess.Board.Tuple3.of;
 
 public interface Board {
+
+    int RIGHT_EDGE = 0;
+    int LEFT_EDGE = 7;
 
     long FILE_A = 0x0101010101010101L;
     long FILE_B = 0x0202020202020202L;
@@ -22,8 +21,6 @@ public interface Board {
     long FILE_F = 0x2020202020202020L;
     long FILE_G = 0x4040404040404040L;
     long FILE_H = 0x8080808080808080L;
-
-
 
     Function<Long, String> longToString = n -> String
             .format("%64s", Long.toBinaryString(n))
@@ -81,7 +78,7 @@ public interface Board {
         case "F" -> 5;
         case "G" -> 6;
         case "H" -> 7;
-        default -> throw new IllegalStateException("Unexpected value: " + index);
+        default -> throw new IllegalStateException(STR."Unexpected value: \{index}");
     };
 
     Function<Tuple2<String, Integer>, Tuple3> t2ToT3 = value ->
@@ -229,7 +226,6 @@ public interface Board {
             new SimpleImmutableEntry<>(h8.index, 0x4020100804020100L)
     );
 
-    //Tuple3[] leftRightDiagonal1 = {a1};
     Tuple3[] leftRightDiagonal2 = {a2, b1};
     Tuple3[] leftRightDiagonal3 = {a3, b2, c1};
     Tuple3[] leftRightDiagonal4 = {a4, b3, c2, d1};
@@ -243,9 +239,7 @@ public interface Board {
     Tuple3[] leftRightDiagonal12 = {e8, f7, g6, h5};
     Tuple3[] leftRightDiagonal13 = {f8, g7, h6};
     Tuple3[] leftRightDiagonal14 = {g8, h7};
-    //Tuple3[] leftRightDiagonal15 = {h8};
 
-    //Tuple3[] rightLeftDiagonal1 = {h1};
     Tuple3[] rightLeftDiagonal2 = {g1, h2};
     Tuple3[] rightLeftDiagonal3 = {f1, g2, h3};
     Tuple3[] rightLeftDiagonal4 = {e1, f2, g3, h4};
@@ -259,10 +253,8 @@ public interface Board {
     Tuple3[] rightLeftDiagonal12 = {a5, b6, c7, d8};
     Tuple3[] rightLeftDiagonal13 = {a6, b7, c8};
     Tuple3[] rightLeftDiagonal14 = {a7, b8};
-    //Tuple3[] rightLeftDiagonal15 = {a8};
 
     List<Tuple3[]> allDiagonals = List.of(
-            //leftRightDiagonal1,
             leftRightDiagonal2,
             leftRightDiagonal3,
             leftRightDiagonal4,
@@ -276,8 +268,6 @@ public interface Board {
             leftRightDiagonal12,
             leftRightDiagonal13,
             leftRightDiagonal14,
-            //leftRightDiagonal15,
-            //rightLeftDiagonal1,
             rightLeftDiagonal2,
             rightLeftDiagonal3,
             rightLeftDiagonal4,
@@ -291,7 +281,6 @@ public interface Board {
             rightLeftDiagonal12,
             rightLeftDiagonal13,
             rightLeftDiagonal14
-            //rightLeftDiagonal15
     );
 
     List<Tuple3[]> filesAndRanks = List.of(
@@ -313,36 +302,11 @@ public interface Board {
             rank8
     );
 
-    /**
-     * Returns all the squares grouped into diagonals, rows and columns.
-     */
-    List<Tuple3[]> allDiagonalsFilesAndRanks = Stream.of(allDiagonals, filesAndRanks)
-            .flatMap(Collection::stream).collect(Collectors.toList());
-
-    /**
-     * Returns the diagonals, rows and columns that contains the given square.
-     */
-    Function<Integer, List<Tuple3[]>> filterSquares = index -> allDiagonalsFilesAndRanks.stream().filter(t3s -> {
-        for (Tuple3 tuple3 : t3s) if (tuple3.index == index) return true;
-        return false;
-    }).toList();
-
-    /**
-     * Convert a list of Tuple3's to a list of strings.
-     */
-    Function<List<Tuple3[]>, List<List<String>>> squaresToStr = t3s ->
-            t3s.stream().map(t -> Arrays.stream(t).map(Tuple3::square).toList()).toList();
-
-    /**
-     * Returns the diagonals, rows and columns that contains the given square as list of strings.
-     */
-    Function<Integer, List<List<String>>> squaresStrFn = filterSquares.andThen(squaresToStr);
-
-    /**
-     * Helpful function that is used to convert a 64-bit string to hex number.
-     * The input represents a chess board where the MSB is black side and LSB is white.
-     * Here is an example of how to use this function:
-     * System.out.println(binaryToStr.apply(0b0000_1110_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000L));
-     */
     Function<Long, String> binaryToStr = Long::toHexString;
+
+    Function<Bitboard, String> boardToHex = board -> binaryToStr.apply(board.allPieces());
+
+    static boolean isWithinBoardLimit(int square){
+        return square >= 0 && square < 64;
+    }
 }
