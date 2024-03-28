@@ -5,11 +5,21 @@ import no.dervis.terminal_aichess.Board;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
+
+import static no.dervis.terminal_aichess.Chess.rook;
 
 public class RookMoveGenerator implements Board {
 
     private final long[] whitePieces;
     private final long[] blackPieces;
+
+    private static final int NORTH_OFFSET = 8;
+    private static final int SOUTH_OFFSET = -8;
+    private static final int EAST_OFFSET = 1;
+    private static final int WEST_OFFSET = -1;
+    private static final int BOARD_SIZE = 64;
+    private static final int ROW_SIZE = 8;
 
     public RookMoveGenerator(Bitboard board) {
         this.whitePieces = board.whitePieces();
@@ -19,7 +29,7 @@ public class RookMoveGenerator implements Board {
     public List<Integer> generateRookMoves(int color) {
         List<Integer> moves = new ArrayList<>();
 
-        long rooks = color == 0 ? whitePieces[3] : blackPieces[3];
+        long rooksBitboard = color == 0 ? whitePieces[rook] : blackPieces[rook];
         long friendlyPieces = 0, enemyPieces = 0;
 
         for (int i = 0; i < 6; i++) {
@@ -27,25 +37,49 @@ public class RookMoveGenerator implements Board {
             enemyPieces |= (color == 0 ? blackPieces[i] : whitePieces[i]);
         }
 
-        long allPieces = friendlyPieces | enemyPieces;
+        long allPiecesBitboard = friendlyPieces | enemyPieces;
 
-        while (rooks != 0) {
-            int fromSquare = Long.numberOfTrailingZeros(rooks);
-            long rookMoves = rookAttacks(fromSquare, allPieces) & ~friendlyPieces;
+        while (rooksBitboard != 0) {
+            int fromSquare = Long.numberOfTrailingZeros(rooksBitboard);
+            long rookMovesBitboard = rookAttacks(fromSquare, allPiecesBitboard) & ~friendlyPieces;
 
-            while (rookMoves != 0) {
-                int toSquare = Long.numberOfTrailingZeros(rookMoves);
+            while (rookMovesBitboard != 0) {
+                int toSquare = Long.numberOfTrailingZeros(rookMovesBitboard);
                 moves.add((fromSquare << 14) | (toSquare << 7));
-                rookMoves &= rookMoves - 1;
+                rookMovesBitboard &= rookMovesBitboard - 1;
             }
-
-            rooks &= rooks - 1;
+            rooksBitboard &= rooksBitboard - 1;
         }
 
         return moves;
     }
 
     public static long rookAttacks(int square, long allPieces) {
+        return calculateAttacksInDirection(square, allPieces, NORTH_OFFSET, i -> true)
+                | calculateAttacksInDirection(square, allPieces, SOUTH_OFFSET, i -> true)
+                | calculateAttacksInDirection(square, allPieces, EAST_OFFSET, i -> i % ROW_SIZE != 0)
+                | calculateAttacksInDirection(square, allPieces, WEST_OFFSET, i -> i % ROW_SIZE != 7);
+    }
+
+
+    private static long calculateAttacksInDirection(int square, long allPieces, int directionOffset, Predicate<Integer> isEdge) {
+        long attacks = 0;
+        for (int i = square + directionOffset; i < BOARD_SIZE && i >= 0 && isEdge.test(i); i += directionOffset) {
+            attacks |= 1L << i;
+            if ((allPieces & (1L << i)) != 0) {
+                break;
+            }
+        }
+        return attacks;
+    }
+
+
+
+
+
+
+    // this is the old attacks calculation method before refactoring it above
+    private static long rookAttacks__(int square, long allPieces) {
         long attacks = 0;
 
         // North

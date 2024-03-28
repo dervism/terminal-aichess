@@ -48,4 +48,81 @@ class RookMoveGeneratorTest implements Board, Chess {
                 .toList();
         assertEquals(14, whiteMoves.size());
     }
+
+    @Test
+    void rookAttacksNone() {
+        Bitboard board = new Bitboard();
+        board.initialiseBoard();
+
+        RookMoveGenerator generator = new RookMoveGenerator(board);
+        assertEquals(0, generator.generateRookMoves(white).size());
+    }
+
+    @Test
+    void rookAttacksA6() {
+        Bitboard board = new Bitboard();
+        board.initialiseBoard();
+        board.removePiece(pawn, white, a2.index());
+
+        RookMoveGenerator generator = new RookMoveGenerator(board);
+        assertEquals(6, generator.generateRookMoves(white).size());
+    }
+
+    @Test
+    void rookAttacksA2() {
+        Bitboard board = new Bitboard();
+        board.initialiseBoard();
+        board.removePiece(pawn, black, a7.index());
+
+        RookMoveGenerator generator = new RookMoveGenerator(board);
+        assertEquals(6, generator.generateRookMoves(black).size());
+    }
+
+
+    @Test
+    void rookAttacksH6() {
+        Bitboard board = new Bitboard();
+        board.initialiseBoard();
+        board.removePiece(pawn, white, h2.index());
+
+        RookMoveGenerator generator = new RookMoveGenerator(board);
+        assertEquals(6, generator.generateRookMoves(white).size());
+    }
+
+    @Test
+    void rookAttacksH2() {
+        Bitboard board = new Bitboard();
+        board.initialiseBoard();
+        board.removePiece(pawn, black, h7.index());
+
+        RookMoveGenerator generator = new RookMoveGenerator(board);
+        assertEquals(6, generator.generateRookMoves(black).size());
+    }
+
+    @Test
+    void rookAttacksCenter() {
+        Bitboard board = new Bitboard();
+        board.initialiseBoard();
+        board.setPiece(rook, white, e4.index());
+
+        RookMoveGenerator generator = new RookMoveGenerator(board);
+        System.out.println(boardToStr.apply(board, true));
+        assertEquals(11, generator.generateRookMoves(white).size());
+    }
+
+    @Test
+    void rookAttacksCenterBlocked() {
+        Bitboard board = new Bitboard();
+        board.initialiseBoard();
+        board.setPiece(rook, white, e4.index());
+        board.setPiece(pawn, white, c4.index());
+
+        RookMoveGenerator generator = new RookMoveGenerator(board);
+        System.out.println(boardToStr.apply(board, true));
+        assertEquals(8, generator.generateRookMoves(white).size());
+
+        CheckHelper helper = new CheckHelper(board);
+        helper.isSquareAttackedByRook(e7.index(), white);
+    }
+
 }
