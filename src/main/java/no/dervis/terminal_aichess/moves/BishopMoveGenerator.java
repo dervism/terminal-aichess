@@ -5,19 +5,20 @@ import no.dervis.terminal_aichess.Board;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
+
+import static no.dervis.terminal_aichess.Board.isWithinBoardLimit;
 
 public class BishopMoveGenerator implements Board {
 
     private final long[] whitePieces;
     private final long[] blackPieces;
 
-    private static final int BOARD_SIZE = 64;
     private static final int NORTH_EAST = 9;
     private static final int NORTH_WEST = 7;
     private static final int SOUTH_EAST = -7;
     private static final int SOUTH_WEST = -9;
-    private static final int RIGHT_EDGE = 0;
-    private static final int LEFT_EDGE = 7;
 
     public BishopMoveGenerator(Bitboard board) {
         this.whitePieces = board.whitePieces();
@@ -65,20 +66,76 @@ public class BishopMoveGenerator implements Board {
     }
 
     private static long calculateAttacksInDirection(int square, long allPieces, int direction, int edge) {
-        long attacks = 0;
-        for (int i = square + direction;
-             isWithinBoardLimit(i) && i % 8 != edge;
-             i += direction) {
-            attacks |= 1L << i;
-            if ((allPieces & (1L << i)) != 0) {
-                break;
-            }
+        // Initial version from gen. ai:
+//      long attacks = 0;
+//        for (int i = square + direction;
+//             isWithinBoardLimit(i) && i % 8 != edge;
+//             i += direction) {
+//            attacks |= 1L << i;
+//            if ((allPieces & (1L << i)) != 0) {
+//                break;
+//            }
+//        }
+
+        // alternative version without break:
+//        int i = square + direction;
+//        while (isWithinBoardLimit(i) && i % 8 != edge) {
+//            attacks |= 1L << i;
+//            if ((allPieces & (1L << i)) != 0) {
+//                break;
+//            }
+//            i += direction;
+//        }
+
+//        int i = square + direction;
+//
+//        while (isWithinBoardLimit(i) && i % 8 != edge) {
+//            attacks |= 1L << i;
+//            if ((allPieces & (1L << i)) != 0) {
+//                i = -1;   // Forcefully fail the while condition
+//            } else {
+//                i += direction;
+//            }
+//        }
+//        return attacks;
+
+        // alternative version without any imperative loops
+        AtomicInteger ai = new AtomicInteger(square + direction);
+        long attacks = Stream
+                .iterate(ai.get(), i -> isWithinBoardLimit(i) && i % 8 != edge, _ -> ai.addAndGet(direction))
+                .mapToLong(i -> 1L << i)
+                .takeWhile(i -> (allPieces & i) == 0)
+                .reduce(0L, (attacked, squareBit) -> attacked | squareBit);
+
+        if (isWithinBoardLimit(ai.get()) && ai.get() % 8 != edge) {
+            attacks |= 1L << ai.get();
         }
+
         return attacks;
+
+        //return calculateAttacksInDirectionRecursive(square, allPieces, direction, edge);
     }
 
-    private static boolean isWithinBoardLimit(int square){
-        return square >= 0 && square < BOARD_SIZE;
+
+    private static long calculateAttacksInDirectionRecursive(int square, long allPieces, int direction, int edge) {
+        return calculateAttacksHelper(square + direction, allPieces, direction, edge, 0L);
+    }
+
+    private static long calculateAttacksHelper(int currentSquare, long allPieces, int direction, int edge, long attacks) {
+        if (!isWithinBoardLimit(currentSquare) || currentSquare % 8 == edge) {
+            return attacks;
+        }
+
+        // Include the current square in the attacks.
+        long currentAttack = 1L << currentSquare;
+        attacks |= currentAttack;
+
+        // If the current square is occupied, return the attacks including the current square.
+        if ((allPieces & currentAttack) != 0) {
+            return attacks;
+        }
+
+        return calculateAttacksHelper(currentSquare + direction, allPieces, direction, edge, attacks);
     }
 
 }
