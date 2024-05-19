@@ -4,8 +4,9 @@ import no.dervis.terminal_aichess.board.Bitboard;
 import no.dervis.terminal_aichess.board.Board;
 import no.dervis.terminal_aichess.board.Chess;
 import no.dervis.terminal_aichess.moves.attacks.BishopAttacks;
-import no.dervis.terminal_aichess.moves.attacks.QueenAttacks;
 import no.dervis.terminal_aichess.moves.attacks.RookAttacks;
+
+import java.util.stream.IntStream;
 
 import static no.dervis.terminal_aichess.moves.BishopMoveGenerator.bishopAttacks;
 import static no.dervis.terminal_aichess.moves.RookMoveGenerator.rookAttacks;
@@ -81,23 +82,69 @@ public class CheckHelper implements Board, Chess {
                 ? whitePieces[rook] | whitePieces[bishop] | whitePieces[queen]
                 : blackPieces[rook] | blackPieces[bishop] | blackPieces[queen];
 
-        long opponentPieces = board.allPieces(1 - attackingColor);
-        //long slidingAttacks = bishopAttacks(square, allPieces) | rookAttacks(square, allPieces);
+        long rookAttackBitboard = getSlidingAttacks(square, RookAttacks.getRookAttacks(square));
+        long bishopAttackBitboard = getSlidingAttacks(square, BishopAttacks.getBishopAttacks(square));
+        long queenAttackBitboard = rookAttackBitboard | bishopAttackBitboard;
 
-        long rookAttackBitboard = RookAttacks.getRookAttacks(square);
-        long bishopAttackBitboard = BishopAttacks.getBishopAttacks(square);
-        long queenAttackBitboard = QueenAttacks.getQueenAttacks(square);
-
-        long slidingAttacks = queenAttackBitboard;
-
-        slidingAttacks &= ~opponentPieces;
-
+        long slidingAttacks = queenAttackBitboard | bishopAttackBitboard | rookAttackBitboard;
         return (slidingAttacks & attackingPieces) != 0;
+    }
+
+    private long getSlidingAttacks(int square, long attackMask) {
+        long attacks = 0L;
+        long blockers = board.allPieces() & attackMask;
+
+        // Calculate the sliding attacks, taking into account the blockers
+        attacks |= getDirectionalSlidingAttacks(square, attackMask, blockers, Direction.NORTH);
+        attacks |= getDirectionalSlidingAttacks(square, attackMask, blockers, Direction.SOUTH);
+        attacks |= getDirectionalSlidingAttacks(square, attackMask, blockers, Direction.EAST);
+        attacks |= getDirectionalSlidingAttacks(square, attackMask, blockers, Direction.WEST);
+        attacks |= getDirectionalSlidingAttacks(square, attackMask, blockers, Direction.NORTH_EAST);
+        attacks |= getDirectionalSlidingAttacks(square, attackMask, blockers, Direction.NORTH_WEST);
+        attacks |= getDirectionalSlidingAttacks(square, attackMask, blockers, Direction.SOUTH_EAST);
+        attacks |= getDirectionalSlidingAttacks(square, attackMask, blockers, Direction.SOUTH_WEST);
+
+        return attacks;
+    }
+
+    private long getDirectionalSlidingAttacks(int square, long attackMask, long blockers, Direction direction) {
+        return IntStream.iterate(
+                getNextSquareInDirection(square, direction),
+                        s -> s != -1 && ((1L << s) & attackMask) != 0,
+                        s -> getNextSquareInDirection(s, direction))
+                .mapToLong(s -> 1L << s)
+                .takeWhile(bitboard -> (bitboard & blockers) == 0)
+                .reduce(0L, (a, b) -> a | b) |
+                IntStream.iterate(
+                        getNextSquareInDirection(square, direction),
+                                s -> s != -1 && ((1L << s) & attackMask) != 0,
+                                s -> getNextSquareInDirection(s, direction))
+                        .mapToLong(s -> 1L << s)
+                        .dropWhile(bitboard -> (bitboard & blockers) == 0)
+                        .findFirst()
+                        .orElse(0L);
+    }
+
+    private int getNextSquareInDirection(int square, Direction direction) {
+        return switch (direction) {
+            case NORTH -> (square >= 56) ? -1 : square + 8;
+            case SOUTH -> (square < 8) ? -1 : square - 8;
+            case EAST -> ((square % 8) == 7) ? -1 : square + 1;
+            case WEST -> ((square % 8) == 0) ? -1 : square - 1;
+            case NORTH_EAST -> ((square >= 56) || ((square % 8) == 7)) ? -1 : square + 9;
+            case NORTH_WEST -> ((square >= 56) || ((square % 8) == 0)) ? -1 : square + 7;
+            case SOUTH_EAST -> ((square < 8) || ((square % 8) == 7)) ? -1 : square - 7;
+            case SOUTH_WEST -> ((square < 8) || ((square % 8) == 0)) ? -1 : square - 9;
+        };
+    }
+
+    enum Direction {
+        NORTH, SOUTH, EAST, WEST, NORTH_EAST, NORTH_WEST, SOUTH_EAST, SOUTH_WEST
     }
 
     public boolean isSquareAttackedByBishop(int square, int attackingColor) {
         long attackingBishops = attackingColor == 0 ? whitePieces[bishop] : blackPieces[bishop];
-        long bishopAttacks = bishopAttacks(square, board.allPieces(attackingColor));
+        long bishopAttacks = bishopAttacks(square, board.allPieces());
 
         // check if any of the attacking bishops can attack the given square
         return (bishopAttacks & attackingBishops) != 0;
@@ -105,7 +152,7 @@ public class CheckHelper implements Board, Chess {
 
     public boolean isSquareAttackedByRook(int square, int attackingColor) {
         long attackingRooks = attackingColor == 0 ? whitePieces[rook] : blackPieces[rook];
-        long rookAttacks = rookAttacks(square, board.allPieces(attackingColor));
+        long rookAttacks = rookAttacks(square, board.allPieces());
 
         // check if any of the attacking bishops can attack the given square
         return (rookAttacks & attackingRooks) != 0;

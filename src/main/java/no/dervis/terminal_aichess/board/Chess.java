@@ -20,8 +20,8 @@ public interface Chess {
     int[] piece_value = {198, 817, 836, 1270, 2521, 0};
 
     int INFINITE = Integer.MAX_VALUE;
-    int CHECKMATE = 6;
-    int DRAW = 7;
+    int CHECKMATE = 12;
+    int DRAW = 13;
 
     enum MoveType {
         NORMAL,

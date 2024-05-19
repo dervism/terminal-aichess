@@ -4,6 +4,9 @@ Simple Java 22 chess app that uses bitboards. This implementation is mainly for 
 
 PS: This is still work in progress. The app will only respond with random moves at the moment.
 
+Running in your terminal:
+` java --enable-preview --source 22  src/main/java/no/dervis/terminal_aichess/TerminalChess.java`
+
 In your terminal, this is how the app will look like.
 
 <img height="256" src="board.png" width="250"/>

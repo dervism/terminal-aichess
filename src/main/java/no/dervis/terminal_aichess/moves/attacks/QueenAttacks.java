@@ -31,7 +31,7 @@ public class QueenAttacks {
     }
 
     public static void main(String[] args) {
-        int square = Bitboard.e4.index();
+        int square = Bitboard.e1.index();
         Bitboard board = new Bitboard();
         long attacks = getQueenAttacks(square);
         for (int i = 0; i < 64; i++) {

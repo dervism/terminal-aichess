@@ -19,6 +19,52 @@ class CheckHelperTest  implements Board, Chess {
     BiFunction<Tuple3, Tuple3, Integer> moveMaker = (from, to) -> (from.index() << 14) | (to.index() << 7);
 
     @Test
+    void isSquareAttackedByOneBishops() {
+        Bitboard board = new Bitboard();
+        board.initialiseBoard();
+        System.out.println(boardToStr.apply(board, true));
+
+        // Set up the board so that the white king is attacked by two black bishops
+        List<Integer> moves = Arrays.asList(
+                moveMaker.apply(f8, b4),
+                moveMaker.apply(d2, d4)
+        );
+
+        moves.forEach(board::makeMove);
+
+        System.out.println(boardToStr.apply(board, true));
+
+        CheckHelper helper = new CheckHelper(board);
+        assertTrue(helper.isSquareAttackedBySlidingPiece(e1.index(), black));
+
+        board.makeMove(moveMaker.apply(c2, c3));
+        assertFalse(helper.isSquareAttackedBySlidingPiece(e1.index(), black));
+    }
+
+    @Test
+    void isSquareAttackedByTwoBishops() {
+        Bitboard board = new Bitboard();
+        board.initialiseBoard();
+        System.out.println(boardToStr.apply(board, true));
+
+        // Set up the board so that the white king is attacked by two black bishops
+        List<Integer> moves = Arrays.asList(
+                moveMaker.apply(f8, b4),
+                moveMaker.apply(c8, h4),
+                moveMaker.apply(d2, d4),
+                moveMaker.apply(c2, c3),
+                moveMaker.apply(f2, f3)
+        );
+
+        moves.forEach(board::makeMove);
+
+        System.out.println(boardToStr.apply(board, true));
+
+        CheckHelper helper = new CheckHelper(board);
+        assertTrue(helper.isSquareAttackedBySlidingPiece(e1.index(), black));
+    }
+
+    @Test
     void isSquareAttackedBySlidingPiece() {
         Bitboard board = new Bitboard();
         board.initialiseBoard();
@@ -41,7 +87,7 @@ class CheckHelperTest  implements Board, Chess {
         board.makeMove(moveMaker.apply(g2, g3));
         System.out.println(boardToStr.apply(board, true));
 
-        assertTrue(helper.isSquareAttackedBySlidingPiece(e1.index(), black));
+        assertFalse(helper.isSquareAttackedBySlidingPiece(e1.index(), black));
     }
 
     @Test
@@ -144,6 +190,7 @@ class CheckHelperTest  implements Board, Chess {
         board.setPiece(rook, white, a4.index());
         board.setPiece(rook, white, h4.index());
         board.setPiece(king, black, e4.index());
+        System.out.println(boardToStr.apply(board, reverse));
 
         CheckHelper helper = new CheckHelper(board);
         assertTrue(helper.isSquareAttackedByRook(e4.index(), white));
@@ -155,6 +202,7 @@ class CheckHelperTest  implements Board, Chess {
         board.setPiece(rook, white, a3.index());
         board.setPiece(rook, white, h5.index());
         board.setPiece(king, black, e4.index());
+        System.out.println(boardToStr.apply(board, reverse));
 
         CheckHelper helper = new CheckHelper(board);
         assertFalse(helper.isSquareAttackedByRook(e4.index(), white));
