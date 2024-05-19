@@ -12,50 +12,36 @@ public record Move(
         int moveType,
         int promotionPiece) {
 
-    public static Move createMove(
-            int piece,
-            int color,
+    public static int createMove(
             int fromSquare,
-            int toSquare
+            int toSquare,
+            int moveType
     ) {
-        return new Move(
-                piece,
-                color,
-                fromSquare,
-                toSquare,
-                Chess.MoveType.NORMAL.ordinal(),
-                0);
+        return createMove(fromSquare, toSquare, moveType, 0);
     }
 
-    public static Move createWhiteMove(
-            int piece,
-            int fromSquare,
-            int toSquare
-    ) {
-        return new Move(
-                piece,
-                Chess.white,
-                fromSquare,
-                toSquare,
-                Chess.MoveType.NORMAL.ordinal(),
-                0);
-    }
-
-    public static Move createMove(
-            int piece,
-            int color,
+    public static int createMove(
             int fromSquare,
             int toSquare,
             int moveType,
             int promotionPiece
     ) {
-        return new Move(
-                piece,
-                color,
-                fromSquare,
-                toSquare,
-                moveType,
-                promotionPiece);
+        return (fromSquare << 14) |
+                (toSquare << 7) |
+                (moveType << 4) |
+                promotionPiece;
+    }
+
+    public static int createMove(Move move) {
+        int fromSquare = move.fromSquare;
+        int toSquare = move.toSquare;
+        int moveType = move.moveType;
+        int promotionPiece = move.promotionPiece;
+
+        return (fromSquare << 14) |
+                (toSquare << 7) |
+                (moveType << 4) |
+                promotionPiece;
     }
 
     public static Move createMove(int move, Bitboard board){

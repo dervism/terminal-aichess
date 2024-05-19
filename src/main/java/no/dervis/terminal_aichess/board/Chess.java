@@ -1,5 +1,7 @@
 package no.dervis.terminal_aichess.board;
 
+import no.dervis.terminal_aichess.moves.Move;
+
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.IntStream;
@@ -36,7 +38,7 @@ public interface Chess {
         case bishop  -> " ♗ ";
         case rook    -> " ♖ ";
         case queen   -> " ♕ ";
-        case king    -> " ♔ ";
+        case king -> " ♔ ";
         case bpawn   -> " ♟ ";
         case bknight -> " ♞ ";
         case bbishop -> " ♝ ";
@@ -46,6 +48,10 @@ public interface Chess {
         case empty   -> "   ";
         default -> throw new IllegalStateException(STR."Unexpected value: \{pieceType}");
     };
+
+    BiFunction<Board.Tuple3, Board.Tuple3, Integer> moveMaker = Move::createMove;
+    BiFunction<Board.Tuple3, Board.Tuple3, Function<MoveType, Integer>> moveTypeMaker
+            = (from, to) -> type -> Move.createMove(from.index(), to.index(), type.ordinal());
 
     BiFunction<Bitboard, Boolean, StringBuilder> boardToStr = (board, reverse) -> {
         StringBuilder builder = new StringBuilder();
