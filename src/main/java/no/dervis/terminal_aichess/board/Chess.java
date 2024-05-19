@@ -1,4 +1,4 @@
-package no.dervis.terminal_aichess;
+package no.dervis.terminal_aichess.board;
 
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -31,19 +31,19 @@ public interface Chess {
     }
 
     Function<Integer, String> pieceToStr = pieceType -> switch (pieceType) {
-        case pawn -> " ♙ ";
-        case knight -> " ♘ ";
-        case bishop -> " ♗ ";
-        case rook -> " ♖ ";
-        case queen -> " ♕ ";
-        case king -> " ♔ ";
-        case bpawn -> " ♟︎ ";
+        case pawn    -> " ♙ ";
+        case knight  -> " ♘ ";
+        case bishop  -> " ♗ ";
+        case rook    -> " ♖ ";
+        case queen   -> " ♕ ";
+        case king    -> " ♔ ";
+        case bpawn   -> " ♟ ";
         case bknight -> " ♞ ";
         case bbishop -> " ♝ ";
-        case brook -> " ♜ ";
-        case bqueen -> " ♛ ";
-        case bking -> " ♚ ";
-        case empty -> "   ";
+        case brook   -> " ♜ ";
+        case bqueen  -> " ♛ ";
+        case bking   -> " ♚ ";
+        case empty   -> "   ";
         default -> throw new IllegalStateException(STR."Unexpected value: \{pieceType}");
     };
 
@@ -54,17 +54,16 @@ public interface Chess {
                 .forEach(row -> {
                     String line = IntStream.range(0, 8)
                             .mapToObj(col -> {
-                                String square = pieceToStr.apply(board.getPiece( board.indexFn.apply(row, col)));
+                                String square = pieceToStr.apply(board.getPiece(BoardPrinter.indexFn.apply(row, col)));
                                 if ((row + col) % 2 == 0) {
-                                    return STR."\u001B[47m\{square}\u001B[0m";
+                                    return "\u001B[47m"+square+"\u001B[0m";
                                 } else {
                                     return square;
                                 }
                             })
-                            .flatMap(square -> IntStream.range(0, 1).mapToObj(i -> square))
                             .collect(StringBuilder::new, StringBuilder::append, StringBuilder::append)
                             .toString();
-                    IntStream.range(0, 1).forEach(i -> builder.append(line).append(System.lineSeparator()));
+                    builder.append(line).append(System.lineSeparator());
                 });
         return builder;
     };

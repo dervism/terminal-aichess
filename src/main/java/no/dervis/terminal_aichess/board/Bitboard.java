@@ -1,4 +1,4 @@
-package no.dervis.terminal_aichess;
+package no.dervis.terminal_aichess.board;
 
 import no.dervis.terminal_aichess.moves.Move;
 

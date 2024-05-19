@@ -1,7 +1,7 @@
 package no.dervis.terminal_aichess.moves.attacks;
 
-import no.dervis.terminal_aichess.Bitboard;
-import no.dervis.terminal_aichess.Chess;
+import no.dervis.terminal_aichess.board.Bitboard;
+import no.dervis.terminal_aichess.board.Chess;
 
 /**
  * Class for precalculating bishop attack squares.
@@ -59,8 +59,6 @@ public class BishopAttacks {
 
         // visualise the attacks on an empty board
         System.out.println(Chess.boardToStr.apply(board, true));
-
-
     }
 }
 

@@ -1,14 +1,12 @@
 package no.dervis.terminal_aichess.moves;
 
-import no.dervis.terminal_aichess.Bitboard;
-import no.dervis.terminal_aichess.Board;
+import no.dervis.terminal_aichess.board.Bitboard;
+import no.dervis.terminal_aichess.board.Board;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-
-import static no.dervis.terminal_aichess.Board.isWithinBoardLimit;
 
 public class BishopMoveGenerator implements Board {
 
@@ -112,30 +110,10 @@ public class BishopMoveGenerator implements Board {
         }
 
         return attacks;
-
-        //return calculateAttacksInDirectionRecursive(square, allPieces, direction, edge);
     }
 
-
-    private static long calculateAttacksInDirectionRecursive(int square, long allPieces, int direction, int edge) {
-        return calculateAttacksHelper(square + direction, allPieces, direction, edge, 0L);
-    }
-
-    private static long calculateAttacksHelper(int currentSquare, long allPieces, int direction, int edge, long attacks) {
-        if (!isWithinBoardLimit(currentSquare) || currentSquare % 8 == edge) {
-            return attacks;
-        }
-
-        // Include the current square in the attacks.
-        long currentAttack = 1L << currentSquare;
-        attacks |= currentAttack;
-
-        // If the current square is occupied, return the attacks including the current square.
-        if ((allPieces & currentAttack) != 0) {
-            return attacks;
-        }
-
-        return calculateAttacksHelper(currentSquare + direction, allPieces, direction, edge, attacks);
+    public static boolean isWithinBoardLimit(int square){
+        return square >= 0 && square < 64;
     }
 
 }

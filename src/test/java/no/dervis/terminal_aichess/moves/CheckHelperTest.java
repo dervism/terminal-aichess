@@ -1,16 +1,48 @@
 package no.dervis.terminal_aichess.moves;
 
-import no.dervis.terminal_aichess.Bitboard;
-import no.dervis.terminal_aichess.Board;
-import no.dervis.terminal_aichess.Chess;
+import no.dervis.terminal_aichess.board.Bitboard;
+import no.dervis.terminal_aichess.board.Board;
+import no.dervis.terminal_aichess.board.Chess;
 import org.junit.jupiter.api.Test;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.function.BiFunction;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CheckHelperTest  implements Board, Chess {
 
-    private boolean reverse = false;
+    private final boolean reverse = false;
+
+    BiFunction<Tuple3, Tuple3, Integer> moveMaker = (from, to) -> (from.index() << 14) | (to.index() << 7);
+
+    @Test
+    void isSquareAttackedBySlidingPiece() {
+        Bitboard board = new Bitboard();
+        board.initialiseBoard();
+        System.out.println(boardToStr.apply(board, true));
+
+        List<Integer> moves = Arrays.asList(
+                moveMaker.apply(f2, f3),
+                moveMaker.apply(e7, e5),
+                moveMaker.apply(a2, a3),
+                moveMaker.apply(d8, h4)
+        );
+
+        moves.forEach(board::makeMove);
+
+        System.out.println(boardToStr.apply(board, true));
+
+        CheckHelper helper = new CheckHelper(board);
+        assertTrue(helper.isSquareAttackedBySlidingPiece(e1.index(), black));
+
+        board.makeMove(moveMaker.apply(g2, g3));
+        System.out.println(boardToStr.apply(board, true));
+
+        assertTrue(helper.isSquareAttackedBySlidingPiece(e1.index(), black));
+    }
 
     @Test
     void isSquareAttackedKnight() {
@@ -104,6 +136,28 @@ class CheckHelperTest  implements Board, Chess {
         board.setPiece(pawn, black, g5.index());
         System.out.println(boardToStr.apply(board, reverse));
         assertTrue(checkHelper.isSquareAttackedByPawn(h4.index(), black));
+    }
+
+    @Test
+    void isSquareAttackedByRook() {
+        Bitboard board = new Bitboard();
+        board.setPiece(rook, white, a4.index());
+        board.setPiece(rook, white, h4.index());
+        board.setPiece(king, black, e4.index());
+
+        CheckHelper helper = new CheckHelper(board);
+        assertTrue(helper.isSquareAttackedByRook(e4.index(), white));
+    }
+
+    @Test
+    void isNotAttackedByRook() {
+        Bitboard board = new Bitboard();
+        board.setPiece(rook, white, a3.index());
+        board.setPiece(rook, white, h5.index());
+        board.setPiece(king, black, e4.index());
+
+        CheckHelper helper = new CheckHelper(board);
+        assertFalse(helper.isSquareAttackedByRook(e4.index(), white));
     }
 
     @Test

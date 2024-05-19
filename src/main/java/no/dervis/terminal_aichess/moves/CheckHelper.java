@@ -1,8 +1,14 @@
 package no.dervis.terminal_aichess.moves;
 
-import no.dervis.terminal_aichess.Bitboard;
-import no.dervis.terminal_aichess.Board;
-import no.dervis.terminal_aichess.Chess;
+import no.dervis.terminal_aichess.board.Bitboard;
+import no.dervis.terminal_aichess.board.Board;
+import no.dervis.terminal_aichess.board.Chess;
+import no.dervis.terminal_aichess.moves.attacks.BishopAttacks;
+import no.dervis.terminal_aichess.moves.attacks.QueenAttacks;
+import no.dervis.terminal_aichess.moves.attacks.RookAttacks;
+
+import static no.dervis.terminal_aichess.moves.BishopMoveGenerator.bishopAttacks;
+import static no.dervis.terminal_aichess.moves.RookMoveGenerator.rookAttacks;
 
 public class CheckHelper implements Board, Chess {
 
@@ -22,7 +28,9 @@ public class CheckHelper implements Board, Chess {
         long kingBitboard = color == 0 ? whitePieces[king] : blackPieces[king];
         int kingSquare = Long.numberOfTrailingZeros(kingBitboard);
 
-        return false;
+        return isSquareAttackedByPawn(kingSquare, opponentColor) ||
+                isSquareAttackedByKnight(kingSquare, opponentColor) ||
+                isSquareAttackedBySlidingPiece(kingSquare, opponentColor);
     }
 
     public boolean isSquareAttackedByPawn(int square, int attackingColor) {
@@ -68,17 +76,39 @@ public class CheckHelper implements Board, Chess {
         return (knightAttacks & attackingKnights[knight]) != 0;
     }
 
-    public boolean isSquareAttackedByBishop(int square, int attackingColor) {
-        long attackedSquareBitboard = 1L << square;
-        long[] attackingBishops = attackingColor == 0 ? whitePieces : blackPieces;
-        long bishopAttacks = 0L;
+    public boolean isSquareAttackedBySlidingPiece(int square, int attackingColor) {
+        long attackingPieces = attackingColor == 0
+                ? whitePieces[rook] | whitePieces[bishop] | whitePieces[queen]
+                : blackPieces[rook] | blackPieces[bishop] | blackPieces[queen];
 
-        // compute bishop attacks for square
+        long opponentPieces = board.allPieces(1 - attackingColor);
+        //long slidingAttacks = bishopAttacks(square, allPieces) | rookAttacks(square, allPieces);
 
+        long rookAttackBitboard = RookAttacks.getRookAttacks(square);
+        long bishopAttackBitboard = BishopAttacks.getBishopAttacks(square);
+        long queenAttackBitboard = QueenAttacks.getQueenAttacks(square);
 
-        // check if any of the attacking bishops can attack the given square
-        return (bishopAttacks & attackingBishops[bishop]) != 0;
+        long slidingAttacks = queenAttackBitboard;
+
+        slidingAttacks &= ~opponentPieces;
+
+        return (slidingAttacks & attackingPieces) != 0;
     }
 
+    public boolean isSquareAttackedByBishop(int square, int attackingColor) {
+        long attackingBishops = attackingColor == 0 ? whitePieces[bishop] : blackPieces[bishop];
+        long bishopAttacks = bishopAttacks(square, board.allPieces(attackingColor));
+
+        // check if any of the attacking bishops can attack the given square
+        return (bishopAttacks & attackingBishops) != 0;
+    }
+
+    public boolean isSquareAttackedByRook(int square, int attackingColor) {
+        long attackingRooks = attackingColor == 0 ? whitePieces[rook] : blackPieces[rook];
+        long rookAttacks = rookAttacks(square, board.allPieces(attackingColor));
+
+        // check if any of the attacking bishops can attack the given square
+        return (rookAttacks & attackingRooks) != 0;
+    }
 
 }

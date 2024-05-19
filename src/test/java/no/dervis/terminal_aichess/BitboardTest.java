@@ -1,5 +1,8 @@
 package no.dervis.terminal_aichess;
 
+import no.dervis.terminal_aichess.board.Bitboard;
+import no.dervis.terminal_aichess.board.Board;
+import no.dervis.terminal_aichess.board.Chess;
 import no.dervis.terminal_aichess.moves.Generator;
 import no.dervis.terminal_aichess.moves.Move;
 import org.junit.jupiter.api.Test;

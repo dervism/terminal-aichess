@@ -1,8 +1,8 @@
 package no.dervis.terminal_aichess.moves;
 
-import no.dervis.terminal_aichess.Bitboard;
-import no.dervis.terminal_aichess.Board.Tuple3;
-import no.dervis.terminal_aichess.Chess;
+import no.dervis.terminal_aichess.board.Bitboard;
+import no.dervis.terminal_aichess.board.Board.Tuple3;
+import no.dervis.terminal_aichess.board.Chess;
 
 public record Move(
         int piece,
@@ -80,6 +80,13 @@ public record Move(
 
     public static int createMove(Tuple3 from, Tuple3 to) {
         return (from.index() << 14) | (to.index() << 7);
+    }
+
+    public String toStringShort() {
+        return "(" +
+                Chess.pieceToStr.apply(color == 0 ? piece : piece + 6) + "," +
+                Tuple3.of(fromSquare).square().toLowerCase() + "->" +
+                Tuple3.of(toSquare).square().toLowerCase() + ")";
     }
 
     @Override

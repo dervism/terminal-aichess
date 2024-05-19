@@ -1,13 +1,13 @@
 package no.dervis.terminal_aichess.moves;
 
-import no.dervis.terminal_aichess.Bitboard;
-import no.dervis.terminal_aichess.Board;
-import no.dervis.terminal_aichess.Chess;
+import no.dervis.terminal_aichess.board.Bitboard;
+import no.dervis.terminal_aichess.board.Board;
+import no.dervis.terminal_aichess.board.Chess;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 class RookMoveGeneratorTest implements Board, Chess {
 
@@ -122,7 +122,8 @@ class RookMoveGeneratorTest implements Board, Chess {
         assertEquals(8, generator.generateRookMoves(white).size());
 
         CheckHelper helper = new CheckHelper(board);
-        helper.isSquareAttackedByRook(e7.index(), white);
+        assertTrue(helper.isSquareAttackedByRook(e7.index(), white));
+        assertFalse(helper.isSquareAttackedByRook(b4.index(), white));
     }
 
 }
