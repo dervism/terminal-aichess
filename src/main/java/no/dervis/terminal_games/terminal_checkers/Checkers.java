@@ -2,15 +2,6 @@ package no.dervis.terminal_games.terminal_checkers;
 
 import java.util.*;
 
-/**
- * This Checkers game is based on record types I wrote myself
- * as a starting point, while the logic is generated.
- *
- * The code is part of a talk about the pros and cons of generative ai
- * as part of software engineering practice.
- *
- */
-
 public class Checkers {
     public enum Color {
         WHITE, WHITE_KING, BLACK, BLACK_KING, EMPTY;
@@ -53,12 +44,10 @@ public class Checkers {
 
     private Board board;
 
-    // constructor
     public Checkers() {
         this.board = initializeBoard();
     }
 
-    // initialise a new 8x8 board
     public Board initializeBoard() {
         Map<Cell, Color> cells = new HashMap<>();
         for (int i = 1; i <= 64; i++) {
@@ -77,15 +66,13 @@ public class Checkers {
         return new Board(cells);
     }
 
-    // game logic for playing checkers
+    // TODO: write logic to check if game is over
     public boolean isGameOver(Board board) {
         return false;
     }
 
-    // function playCheckersWithTwoPlayers
     public void playCheckersWithTwoPlayers(Player player1, Player player2) {
         while (!isGameOver(board)) {
-            // get user move from input
             Move move = getUserMove(player1);
             if (!checkIfMoveIsValid(move, board)) {
                 System.out.println("Invalid move: " + move);
@@ -95,17 +82,15 @@ public class Checkers {
                 board = makeMove(move, board);
             }
 
-            // generate a random move for the computer move
-            Move computerMove = generateRandomValidMove(player2, board);
+            Move computerMove = generateRandomComputerMove(player2, board);
             if (computerMove != null){
                 System.out.println("Computer move: " + computerMove);
                 System.out.println("Computer move: " + printMove(computerMove));
                 board = makeMove(computerMove, board);
             }
-            printBoard();
+            prettyPrintBoard();
         }
     }
-
 
     public List<Move> generateAllValidMoves(Player player, Board board) {
         List<Move> validMoves = new ArrayList<>();
@@ -227,7 +212,7 @@ public class Checkers {
     }
 
 
-    public Move generateRandomValidMove(Player player, Board board) {
+    public Move generateRandomComputerMove(Player player, Board board) {
         List<Move> validMoves = generateAllValidMoves(player, board);
         if (validMoves.isEmpty()) {
             return null;
@@ -273,9 +258,9 @@ public class Checkers {
     }
 
     private Move getUserMove(Player player) {
-        // get user move from system input based on cell number from and to
+        System.out.println("Enter your move (from-to):");
         Scanner scanner = new Scanner(System.in);
-        String input = scanner.next();
+        String input = scanner.next().toLowerCase();
         String[] move = input.split("-");
 
         String fromCellString = move[0];
@@ -287,18 +272,12 @@ public class Checkers {
     }
 
     private int convertCellToInt(String cellString) {
-        // Convert the cell string to a numeric cell index
-        // First convert column letter to a number from 1 to 8
         int column = cellString.charAt(0) - 'a' + 1;
-        // Then convert row digit to number from 1 to 8
         int row = Character.getNumericValue(cellString.charAt(1));
         return (row - 1) * 8 + column;
     }
 
-    // pretty print the board
-    public void printBoard() {
-        // pretty print the complete board with row and column numbers, and cell values
-        // separate the cells with a separator
+    public void prettyPrintBoard() {
         String separator = "  +---+---+---+---+---+---+---+---+\n";
         System.out.print("    a   b   c   d   e   f   g   h\n");
         for (int row = 1; row <= 8; row++) {
@@ -317,9 +296,8 @@ public class Checkers {
     }
 
     public static void main(String[] args) {
-        // initialise a new game of Checkers with two players
         Checkers checkers = new Checkers();
-        checkers.printBoard();
+        checkers.prettyPrintBoard();
         Player player1 = new Player("Player 1", Color.WHITE);
         Player player2 = new Player("Player 2", Color.BLACK);
         checkers.playCheckersWithTwoPlayers(player1, player2);
