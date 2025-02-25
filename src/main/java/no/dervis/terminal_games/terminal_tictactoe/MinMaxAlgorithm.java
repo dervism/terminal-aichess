@@ -82,7 +82,6 @@ public class MinMaxAlgorithm {
 
     private List<TicTacToe.Cell> sortMoves(List<TicTacToe.Cell> moves, TicTacToe game) {
         int size = (int) Math.sqrt(game.getBoardSize());
-        int center = size / 2;
 
         // First, check for immediate winning moves or blocking moves
         for (TicTacToe.Cell move : moves) {
