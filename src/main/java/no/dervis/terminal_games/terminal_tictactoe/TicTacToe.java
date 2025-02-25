@@ -9,6 +9,10 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static java.lang.String.format;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.IntStream.range;
+
 public class TicTacToe {
     public record Cell(int i) {}
     public record Player(int id) {}
@@ -42,7 +46,7 @@ public class TicTacToe {
         this.boardSize = boardSize;
         this.board = new Board(boardSize,
                 new ArrayList<>(
-                        IntStream.range(0,boardSize).mapToObj(_ -> PlayerSymbol.E).toList()
+                        range(0,boardSize).mapToObj(_ -> PlayerSymbol.E).toList()
                 )
         );
         this.minMax = new MinMaxAlgorithm(6);
@@ -51,44 +55,28 @@ public class TicTacToe {
     // pretty print the complete board with row and column numbers, and cell values (E should printed as " ")
     // separate the cells with a separator
     public String prettyPrintBoard() {
-        StringBuilder completeBoardString = new StringBuilder();
         int size = (int) Math.sqrt(board.cells.size());
-
         Function<PlayerSymbol, String> symStr = sym -> switch (sym) {
             case X -> "⛂";
             case O -> "⛀";
             case E -> " ";
         };
 
-        // Print column numbers
-        completeBoardString.append("  | ");
-        for (int i = 0; i < size; i++) {
-            completeBoardString.append(String.format("%d | ", i + 1));
-        }
-        completeBoardString.append("\n");
+        // Generate column header using streams
+        String columnHeader = range(0, size)
+                .mapToObj(i -> format("%d | ", i + 1))
+                .collect(joining("", "  | ", "\n"));
 
-        // Print row and cell values
-        for (int i = 0; i < size; i++) {
-            completeBoardString.append(String.format("%d | ", i + 1));
-            for (int j = 0; j < size; j++) {
-                int index = i * size + j;
-                PlayerSymbol playerSymbol = board.cells.get(index);
+        // Generate rows using streams
+        String rows = range(0, size)
+                .mapToObj(i -> format("%d | ", i + 1) + range(0, size)
+                        .mapToObj(j -> symStr.apply(board.cells.get(i * size + j)))
+                        .collect(joining(" | ", "", " | "))
+                )
+                .collect(joining("\n"));
 
-                String cellValue;
-                // Updated check for 'E' and null PlayerSymbol
-                if (playerSymbol == null || playerSymbol.equals(PlayerSymbol.E)) {
-                    cellValue = " ";
-                } else {
-                    cellValue = symStr.apply(playerSymbol);
-                }
-
-                completeBoardString.append(String.format("%s | ", cellValue));
-            }
-
-            completeBoardString.append("\n");
-        }
-
-        return completeBoardString.toString();
+        // Combine column and row strings
+        return columnHeader + rows + "\n";
     }
 
     // read user move from terminal
@@ -174,7 +162,7 @@ public class TicTacToe {
     }
 
     public List<Cell> getFreeSquares(Board board) {
-        return IntStream.range(0, board.size())
+        return range(0, board.size())
                 .filter(i -> getCellValue(i) == PlayerSymbol.E)
                 .mapToObj(Cell::new)
                 .collect(Collectors.toCollection(() -> new ArrayList<>(board.size())));
@@ -200,7 +188,7 @@ public class TicTacToe {
     public boolean rowsWin(PlayerSymbol symbol, Board board) {
         int stride = (int) Math.sqrt(board.cells.size());
 
-        return IntStream.range(0, stride)
+        return range(0, stride)
                 .anyMatch(i ->
                         IntStream.rangeClosed(0, stride - xInARow)
                                 .anyMatch(k -> isAllSymbol(board.cells.subList(i * stride + k, i * stride + k + xInARow), symbol))
@@ -210,12 +198,12 @@ public class TicTacToe {
     public boolean colsWin(PlayerSymbol symbol, Board board) {
         int stride = (int) Math.sqrt(board.cells.size());
 
-        return IntStream.range(0, stride)
+        return range(0, stride)
                 .anyMatch(i ->
                         IntStream.rangeClosed(0, stride - xInARow)
                                 .anyMatch(k ->
                                         isAllSymbol(
-                                                IntStream.range(0, xInARow)
+                                                range(0, xInARow)
                                                         .mapToObj(j -> board.cells.get(i + (k + j) * stride))
                                                         .collect(Collectors.toList()),
                                                 symbol)
@@ -229,17 +217,17 @@ public class TicTacToe {
 
         // Check for left-to-right diagonals (\)
         boolean hasLeftToRightDiagonal =
-                IntStream.range(0, stride - windowSize + 1)
+                range(0, stride - windowSize + 1)
                 .anyMatch(i ->
-                        IntStream.range(0, stride - windowSize + 1)
+                        range(0, stride - windowSize + 1)
                         .anyMatch(j ->
-                                IntStream.range(0, windowSize)
+                                range(0, windowSize)
                                 .allMatch(k -> board.cells.get((i+k) * stride + j + k) == symbol)));
 
         // Check for right-to-left diagonals (/)
-        boolean hasRightToLeftDiagonal = IntStream.range(windowSize - 1, stride)
-                .anyMatch(i -> IntStream.range(0, stride - windowSize + 1)
-                        .anyMatch(j -> IntStream.range(0, windowSize)
+        boolean hasRightToLeftDiagonal = range(windowSize - 1, stride)
+                .anyMatch(i -> range(0, stride - windowSize + 1)
+                        .anyMatch(j -> range(0, windowSize)
                                 .allMatch(k -> board.cells.get((i-k) * stride + j + k) == symbol)));
 
         return hasLeftToRightDiagonal || hasRightToLeftDiagonal;
