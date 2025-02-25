@@ -45,27 +45,7 @@ public class TicTacToe {
                         IntStream.range(0,boardSize).mapToObj(_ -> PlayerSymbol.E).toList()
                 )
         );
-        this.minMax = new MinMaxAlgorithm(6);
-    }
-
-    public String printBoard() {
-        StringBuilder boardString = new StringBuilder();
-        int size = (int) Math.sqrt(board.cells.size());
-
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-                int index = i * size + j;
-                PlayerSymbol playerSymbol = board.cells.get(index);
-                String cellValue = playerSymbol == null || playerSymbol == PlayerSymbol.E  ? " " : playerSymbol.name();
-                boardString.append(String.format("%s", cellValue));
-                if(j != size - 1){
-                    boardString.append(" | ");
-                }
-            }
-            boardString.append("\n");
-        }
-
-        return boardString.toString();
+        this.minMax = new MinMaxAlgorithm(7);
     }
 
     // pretty print the complete board with row and column numbers, and cell values (E should printed as " ")
@@ -121,7 +101,7 @@ public class TicTacToe {
         return (int) ((Integer.parseInt(arr[0]) - 1) * Math.sqrt(boardSize) + (Integer.parseInt(arr[1]) - 1));
     }
 
-    public boolean askPlayFirstOrSecond() {
+    public boolean askToPlayFirstOrSecond() {
         Scanner scanner = new Scanner(System.in);
         System.out.print("Play first or second? (f/s): ");
         String input = scanner.nextLine();
@@ -134,7 +114,7 @@ public class TicTacToe {
         System.out.println(prettyPrintBoard());
         State state = State.InProgress;
 
-        if (askPlayFirstOrSecond()) {
+        if (askToPlayFirstOrSecond()) {
             Pair<State, Integer> nextState = makeComputerMove();
             System.out.println(prettyPrintBoard());
             state = nextState.left();

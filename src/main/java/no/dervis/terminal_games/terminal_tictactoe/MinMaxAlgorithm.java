@@ -10,6 +10,36 @@ public class MinMaxAlgorithm {
         this.defaultMaxDepth = maxDepth;
     }
 
+    /**
+     * Calculates an appropriate search depth for the minimax algorithm based on the board size.
+     * 
+     * The method uses the square root of boardSize (not game.xInARow) because:
+     * 1. The square root represents the actual dimensions of the board (e.g., 3x3, 6x6)
+     * 2. The computational complexity of minimax is O(b^d), where:
+     *    - b is the branching factor (number of possible moves)
+     *    - d is the search depth
+     * 3. For a board of size NxN:
+     *    - The branching factor is proportional to N^2 (total cells)
+     *    - We need to reduce depth as N increases to maintain reasonable performance
+     * 
+     * Using game.xInARow would be incorrect because:
+     * - xInARow represents the win condition (e.g., 4-in-a-row), not the board dimensions
+     * - A 6x6 board with 4-in-a-row has the same computational complexity regardless of xInARow
+     * - The search space is determined by board size, not by the win condition
+     * 
+     * The formula defaultMaxDepth - (size - 3) ensures that:
+     * - 3x3 board uses full defaultMaxDepth (no reduction)
+     * - Larger boards get progressively reduced depth
+     * - Minimum depth is 3 to maintain reasonable play quality
+     * 
+     * Examples:
+     * - 3x3 board (boardSize=9):  depth = defaultMaxDepth
+     * - 6x6 board (boardSize=36): depth = defaultMaxDepth - 3
+     * - 9x9 board (boardSize=81): depth = defaultMaxDepth - 6
+     * 
+     * @param boardSize The total number of cells in the board (width * height)
+     * @return The calculated search depth, minimum 3
+     */
     private int getAdaptiveDepth(int boardSize) {
         // Reduce depth for larger boards
         int size = (int) Math.sqrt(boardSize);
@@ -20,6 +50,8 @@ public class MinMaxAlgorithm {
         int bestScore = Integer.MIN_VALUE;
         int bestMove = -1;
         int adaptiveDepth = getAdaptiveDepth(game.getBoardSize());
+
+        System.out.println("Using adaptive depth: " + adaptiveDepth + " for board size: " + game.getBoardSize() + "x" + game.getBoardSize());
 
         List<TicTacToe.Cell> availableMoves = game.getFreeSquares(game.board());
         availableMoves = sortMoves(availableMoves, game);
