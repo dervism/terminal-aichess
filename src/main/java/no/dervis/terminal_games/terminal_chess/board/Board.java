@@ -1,8 +1,8 @@
-package no.dervis.terminal_aichess.board;
+package no.dervis.terminal_games.terminal_chess.board;
 
 import java.util.function.Function;
 
-import static no.dervis.terminal_aichess.board.Board.Tuple3.of;
+import static no.dervis.terminal_games.terminal_chess.board.Board.Tuple3.of;
 
 public interface Board {
 
@@ -29,7 +29,7 @@ public interface Board {
 
         @Override
         public String toString() {
-            return STR."T3( r=\{rank}, f=\{file}, i=\{index}\{')'}";
+            return "T3( r=" + rank + ", f=" + file + ", i=" + index + ")";
         }
     }
 

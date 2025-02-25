@@ -1,10 +1,10 @@
-package no.dervis.terminal_aichess.moves;
+package no.dervis.terminal_games.terminal_chess.moves;
 
-import no.dervis.terminal_aichess.board.Bitboard;
+import no.dervis.terminal_games.terminal_chess.board.Bitboard;
 import org.junit.jupiter.api.Test;
 
-import static no.dervis.terminal_aichess.board.Board.*;
-import static no.dervis.terminal_aichess.board.Chess.*;
+import static no.dervis.terminal_games.terminal_chess.board.Board.*;
+import static no.dervis.terminal_games.terminal_chess.board.Chess.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 

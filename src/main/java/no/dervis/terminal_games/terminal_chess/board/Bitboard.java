@@ -1,6 +1,6 @@
-package no.dervis.terminal_aichess.board;
+package no.dervis.terminal_games.terminal_chess.board;
 
-import no.dervis.terminal_aichess.moves.Move;
+import no.dervis.terminal_games.terminal_chess.moves.Move;
 
 import java.util.LinkedList;
 
@@ -227,4 +227,3 @@ public class Bitboard implements Board, Chess {
         return white | black;
     }
 }
-
