@@ -197,7 +197,7 @@ public class TicTacToe {
         return IntStream.range(0, board.size())
                 .filter(i -> getCellValue(i) == PlayerSymbol.E)
                 .mapToObj(Cell::new)
-                .toList();
+                .collect(Collectors.toCollection(() -> new ArrayList<>(board.size())));
     }
 
     public void setMove(int position, PlayerSymbol symbol) {
