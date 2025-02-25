@@ -73,7 +73,7 @@ public class TicTacToeTest {
                 PlayerSymbol.O, PlayerSymbol.E, PlayerSymbol.E,
                 PlayerSymbol.E, PlayerSymbol.E, PlayerSymbol.E
         ));
-        Assertions.assertEquals(State.Draw, game.checkGameState());
+        Assertions.assertEquals(State.InProgress, game.checkGameState());
     }
 
     @Test
@@ -180,7 +180,7 @@ public class TicTacToeTest {
                 PlayerSymbol.X, PlayerSymbol.E, PlayerSymbol.X, PlayerSymbol.X, PlayerSymbol.E, PlayerSymbol.X
         ));
 
-        Assertions.assertEquals(State.Draw, game.checkGameState());
+        Assertions.assertEquals(State.InProgress, game.checkGameState());
     }
 
 

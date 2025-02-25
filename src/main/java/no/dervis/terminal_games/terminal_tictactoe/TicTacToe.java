@@ -4,7 +4,6 @@ import no.dervis.Pair;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 import java.util.Scanner;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -32,6 +31,8 @@ public class TicTacToe {
     private final Board board;
     public Board board() { return board; }
 
+    private final MinMaxAlgorithm minMax;
+
     public TicTacToe() {
         this(3, 3 * 3);
     }
@@ -44,6 +45,7 @@ public class TicTacToe {
                         IntStream.range(0,boardSize).mapToObj(_ -> PlayerSymbol.E).toList()
                 )
         );
+        this.minMax = new MinMaxAlgorithm(6);
     }
 
     public String printBoard() {
@@ -141,6 +143,7 @@ public class TicTacToe {
         while (state == State.InProgress) {
             int userMove = readUserMove();
             board.cells.set(userMove, PlayerSymbol.X);
+            System.out.println(prettyPrintBoard());
             state = checkGameState();
 
             if (state != State.PlayerWon && state != State.Draw) {
@@ -181,27 +184,32 @@ public class TicTacToe {
     }
 
     private Pair<State, Integer> makeComputerMove() {
-        int computerMove = getRandomFreeSquare(board);
-        board.cells.set(computerMove, PlayerSymbol.O);
+        int computerMove = minMax.findBestMove(this);
+        setMove(computerMove, PlayerSymbol.O);
         return new Pair<>(checkGameState(), computerMove);
     }
 
-    // given a board, return a random free square
-    public int getRandomFreeSquare(Board board) {
-        List<Cell> freeSquares = getFreeSquares(board);
-        return freeSquares.get(new Random().nextInt(freeSquares.size())).i();
-    }
-
-    private static boolean hasFreeSquares(Board board) {
+    private boolean hasFreeSquares(Board board) {
         return !getFreeSquares(board).isEmpty();
     }
 
-    private static List<Cell> getFreeSquares(Board board) {
-        List<Cell> freeSquares = IntStream.range(0, board.size())
-                .filter(i -> board.cells.get(i) == PlayerSymbol.E)
+    public List<Cell> getFreeSquares(Board board) {
+        return IntStream.range(0, board.size())
+                .filter(i -> getCellValue(i) == PlayerSymbol.E)
                 .mapToObj(Cell::new)
                 .toList();
-        return freeSquares;
+    }
+
+    public void setMove(int position, PlayerSymbol symbol) {
+        board.cells.set(position, symbol);
+    }
+
+    public PlayerSymbol getCellValue(int position) {
+        return board.cells.get(position);
+    }
+
+    public int getBoardSize() {
+        return board.size();
     }
 
 
@@ -263,8 +271,8 @@ public class TicTacToe {
 
 
     public static void main(String[] args) {
-        //new TicTacToe(4, 6*6).playGame();
-        new TicTacToe().playGame();
+        new TicTacToe(4, 6*6).playGame();
+        //new TicTacToe().playGame();
     }
 
 }
