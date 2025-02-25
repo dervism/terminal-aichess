@@ -1,5 +1,7 @@
 package no.dervis.terminal_games.terminal_tictactoe;
 
+import no.dervis.Pair;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -9,10 +11,11 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class TicTacToe {
+    public record Cell(int i) {}
     public record Player(int id) {}
     public enum PlayerSymbol { X, O, E }
 
-    public enum State { Draw, PlayerWon, ComputerWon }
+    public enum State { Draw, PlayerWon, ComputerWon, InProgress }
     public record Board(int size, List<PlayerSymbol> cells) {
         public void setCells(List<PlayerSymbol> updated) {
             cells.clear();
@@ -116,41 +119,53 @@ public class TicTacToe {
         return (int) ((Integer.parseInt(arr[0]) - 1) * Math.sqrt(boardSize) + (Integer.parseInt(arr[1]) - 1));
     }
 
-    // given a board, return a random free square
-    public int getRandomFreeSquare(Board board) {
-        record Cell(int i) {}
-        List<Cell> freeSquares = IntStream.range(0, board.size())
-                .filter(i -> board.cells.get(i) == PlayerSymbol.E)
-                .mapToObj(Cell::new)
-                .toList();
-        return freeSquares.get(new Random().nextInt(freeSquares.size())).i();
+    public boolean askPlayFirstOrSecond() {
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Play first or second? (f/s): ");
+        String input = scanner.nextLine();
+        return input.equalsIgnoreCase("s");
     }
 
     // play the game, each player makes a move in turn
     // then print out the board
-    public void playGame() {
+    public State playGame() {
         System.out.println(prettyPrintBoard());
-        State state = State.Draw;
-        while (state == State.Draw) {
+        State state = State.InProgress;
+
+        if (askPlayFirstOrSecond()) {
+            Pair<State, Integer> nextState = makeComputerMove();
+            System.out.println(prettyPrintBoard());
+            state = nextState.left();
+        }
+
+        while (state == State.InProgress) {
             int userMove = readUserMove();
             board.cells.set(userMove, PlayerSymbol.X);
-
             state = checkGameState();
-            if (state != State.PlayerWon) {
-                int computerMove = getRandomFreeSquare(board);
-                board.cells.set(computerMove, PlayerSymbol.O);
-                state = checkGameState();
+
+            if (state != State.PlayerWon && state != State.Draw) {
+                Pair<State, Integer> nextState = makeComputerMove();
+                state = nextState.left();
             }
             System.out.println(prettyPrintBoard());
         }
 
-        if (state == State.PlayerWon) {
-            System.out.println("Congratulations! You won!");
-        } else if (state == State.ComputerWon) {
-            System.out.println("Sorry, you lost. Better luck next time!");
-        } else {
-            System.out.println("It's a draw!");
+        switch (state) {
+            case PlayerWon -> {
+                System.out.println("Congratulations! You won!");
+                return State.PlayerWon;
+            }
+            case ComputerWon -> {
+                System.out.println("Sorry, you lost. Better luck next time!");
+                return State.ComputerWon;
+            }
+            case Draw -> {
+                System.out.println("It's a draw!");
+                return State.Draw;
+            }
         }
+
+        return State.InProgress;
     }
 
     public State checkGameState() {
@@ -160,9 +175,35 @@ public class TicTacToe {
     private State checkForWinner(Board board) {
         if (isWinning(PlayerSymbol.X, board)) return State.PlayerWon;
         if (isWinning(PlayerSymbol.O, board)) return State.ComputerWon;
+        if (!getFreeSquares(board).isEmpty()) return State.InProgress;
 
         return State.Draw;
     }
+
+    private Pair<State, Integer> makeComputerMove() {
+        int computerMove = getRandomFreeSquare(board);
+        board.cells.set(computerMove, PlayerSymbol.O);
+        return new Pair<>(checkGameState(), computerMove);
+    }
+
+    // given a board, return a random free square
+    public int getRandomFreeSquare(Board board) {
+        List<Cell> freeSquares = getFreeSquares(board);
+        return freeSquares.get(new Random().nextInt(freeSquares.size())).i();
+    }
+
+    private static boolean hasFreeSquares(Board board) {
+        return !getFreeSquares(board).isEmpty();
+    }
+
+    private static List<Cell> getFreeSquares(Board board) {
+        List<Cell> freeSquares = IntStream.range(0, board.size())
+                .filter(i -> board.cells.get(i) == PlayerSymbol.E)
+                .mapToObj(Cell::new)
+                .toList();
+        return freeSquares;
+    }
+
 
     private boolean isWinning(PlayerSymbol symbol, Board board) {
         return rowsWin(symbol, board) || colsWin(symbol, board) || diagonalsWin(symbol, board);
@@ -222,7 +263,8 @@ public class TicTacToe {
 
 
     public static void main(String[] args) {
-        new TicTacToe(4, 6*6).playGame();
+        //new TicTacToe(4, 6*6).playGame();
+        new TicTacToe().playGame();
     }
 
 }
