@@ -45,7 +45,7 @@ public class TicTacToe {
                         IntStream.range(0,boardSize).mapToObj(_ -> PlayerSymbol.E).toList()
                 )
         );
-        this.minMax = new MinMaxAlgorithm(7);
+        this.minMax = new MinMaxAlgorithm(6);
     }
 
     // pretty print the complete board with row and column numbers, and cell values (E should printed as " ")
