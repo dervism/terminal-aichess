@@ -1,8 +1,8 @@
-package no.dervis.terminal_aichess.moves;
+package no.dervis.terminal_games.terminal_chess.moves;
 
-import no.dervis.terminal_aichess.board.Bitboard;
-import no.dervis.terminal_aichess.board.Board.Tuple3;
-import no.dervis.terminal_aichess.board.Chess;
+import no.dervis.terminal_games.terminal_chess.board.Bitboard;
+import no.dervis.terminal_games.terminal_chess.board.Board.Tuple3;
+import no.dervis.terminal_games.terminal_chess.board.Chess;
 
 public record Move(
         int piece,

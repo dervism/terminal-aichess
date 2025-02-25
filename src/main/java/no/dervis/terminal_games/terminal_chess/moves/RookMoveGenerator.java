@@ -1,13 +1,13 @@
-package no.dervis.terminal_aichess.moves;
+package no.dervis.terminal_games.terminal_chess.moves;
 
-import no.dervis.terminal_aichess.board.Bitboard;
-import no.dervis.terminal_aichess.board.Board;
+import no.dervis.terminal_games.terminal_chess.board.Bitboard;
+import no.dervis.terminal_games.terminal_chess.board.Board;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
 
-import static no.dervis.terminal_aichess.board.Chess.rook;
+import static no.dervis.terminal_games.terminal_chess.board.Chess.rook;
 
 public class RookMoveGenerator implements Board {
 

@@ -1,6 +1,6 @@
-package no.dervis.terminal_aichess.board;
+package no.dervis.terminal_games.terminal_chess.board;
 
-import no.dervis.terminal_aichess.moves.Move;
+import no.dervis.terminal_games.terminal_chess.moves.Move;
 
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -46,7 +46,7 @@ public interface Chess {
         case bqueen  -> " ♛ ";
         case bking   -> " ♚ ";
         case empty   -> "   ";
-        default -> throw new IllegalStateException(STR."Unexpected value: \{pieceType}");
+        default -> throw new IllegalStateException("Unexpected value: " + pieceType);
     };
 
     BiFunction<Board.Tuple3, Board.Tuple3, Integer> moveMaker = Move::createMove;

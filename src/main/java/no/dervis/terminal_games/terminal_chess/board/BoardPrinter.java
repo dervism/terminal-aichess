@@ -1,4 +1,4 @@
-package no.dervis.terminal_aichess.board;
+package no.dervis.terminal_games.terminal_chess.board;
 
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -17,7 +17,7 @@ public interface BoardPrinter {
         case 5 -> "F";
         case 6 -> "G";
         case 7 -> "H";
-        default -> throw new IllegalStateException(STR."Unexpected value: \{columnFn.apply(index)}");
+        default -> throw new IllegalStateException("Unexpected value: " + columnFn.apply(index));
     };
 
     Function<String, Integer> columnToIndex = index -> switch (index) {
@@ -29,7 +29,7 @@ public interface BoardPrinter {
         case "F" -> 5;
         case "G" -> 6;
         case "H" -> 7;
-        default -> throw new IllegalStateException(STR."Unexpected value: \{index}");
+        default -> throw new IllegalStateException("Unexpected value: " + index);
     };
 
 }

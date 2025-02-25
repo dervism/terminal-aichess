@@ -1,12 +1,12 @@
-package no.dervis.terminal_aichess;
+package no.dervis.terminal_games.terminal_chess;
 
-import no.dervis.terminal_aichess.board.Bitboard;
-import no.dervis.terminal_aichess.board.Board.Tuple2;
-import no.dervis.terminal_aichess.board.Board.Tuple3;
-import no.dervis.terminal_aichess.board.BoardPrinter;
-import no.dervis.terminal_aichess.board.Chess;
-import no.dervis.terminal_aichess.moves.Generator;
-import no.dervis.terminal_aichess.moves.Move;
+import no.dervis.terminal_games.terminal_chess.board.Bitboard;
+import no.dervis.terminal_games.terminal_chess.board.Board.Tuple2;
+import no.dervis.terminal_games.terminal_chess.board.Board.Tuple3;
+import no.dervis.terminal_games.terminal_chess.board.BoardPrinter;
+import no.dervis.terminal_games.terminal_chess.board.Chess;
+import no.dervis.terminal_games.terminal_chess.moves.Generator;
+import no.dervis.terminal_games.terminal_chess.moves.Move;
 
 import java.util.List;
 import java.util.Optional;
@@ -14,8 +14,8 @@ import java.util.Random;
 import java.util.Scanner;
 import java.util.function.Function;
 
-import static no.dervis.terminal_aichess.board.Chess.black;
-import static no.dervis.terminal_aichess.board.Chess.white;
+import static no.dervis.terminal_games.terminal_chess.board.Chess.black;
+import static no.dervis.terminal_games.terminal_chess.board.Chess.white;
 
 public class TerminalChess implements BoardPrinter {
 
@@ -48,7 +48,8 @@ public class TerminalChess implements BoardPrinter {
 
                 List<Integer> userMoves = generator.generateMoves(board.turn());
                 var parsedInput = parseMove(userInput);
-                parsedInput.flatMap(parsedMove -> userMoves
+                parsedInput.flatMap(
+                        parsedMove -> userMoves
                                 .stream()
                                 .map(move -> new Tuple2<>(move, Move.createMove(move, board)))
                                 .filter(t2 -> t2.right().fromSquare() == parsedMove.left().index())
@@ -66,7 +67,6 @@ public class TerminalChess implements BoardPrinter {
 
             clearTerminal();
             System.out.println(Chess.boardToStr.apply(board, userColor));
-
 
             /*if (board.isCheckmate()) {
                 System.out.println("Checkmate!");
