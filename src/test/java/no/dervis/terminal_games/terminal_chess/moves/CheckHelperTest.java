@@ -1,8 +1,8 @@
-package no.dervis.terminal_aichess.moves;
+package no.dervis.terminal_games.terminal_chess.moves;
 
-import no.dervis.terminal_aichess.board.Bitboard;
-import no.dervis.terminal_aichess.board.Board;
-import no.dervis.terminal_aichess.board.Chess;
+import no.dervis.terminal_games.terminal_chess.board.Bitboard;
+import no.dervis.terminal_games.terminal_chess.board.Board;
+import no.dervis.terminal_games.terminal_chess.board.Chess;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -356,4 +356,22 @@ class CheckHelperTest  implements Board, Chess {
         CheckHelper helper = new CheckHelper(board);
         assertTrue(helper.isSquareAttackedBySlidingPiece(a1.index(), black));
     }
+
+    @Test
+    void isSquareAttackedBySlidingPieceTest_EdgeCase() {
+        Bitboard board = new Bitboard();
+        board.setPiece(queen, white, a8.index());
+        board.setPiece(king, black, h1.index());
+        System.out.println(boardToStr.apply(board, reverse));
+
+        CheckHelper helper = new CheckHelper(board);
+        assertTrue(helper.isSquareAttackedBySlidingPiece(h1.index(), white));
+
+        board.setPiece(bishop, black, e4.index());
+        System.out.println(boardToStr.apply(board, reverse));
+
+        helper = new CheckHelper(board);
+        assertFalse(helper.isSquareAttackedBySlidingPiece(h1.index(), white));
+    }
+
 }

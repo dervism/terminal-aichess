@@ -1,12 +1,13 @@
-package no.dervis.terminal_aichess.moves;
+package no.dervis.terminal_games.terminal_chess.moves;
 
-import no.dervis.terminal_aichess.board.Bitboard;
+import no.dervis.terminal_games.terminal_chess.board.Bitboard;
+import no.dervis.terminal_games.terminal_chess.board.Chess;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class Generator {
+public class Generator implements Chess {
 
     private final Bitboard board;
 
