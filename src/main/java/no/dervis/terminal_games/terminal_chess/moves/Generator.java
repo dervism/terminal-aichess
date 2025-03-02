@@ -26,6 +26,10 @@ public class Generator implements Chess {
         generateQueenMoves(moves, color);
         generateKingMoves(moves, color);
 
+        return filterLegalMoves(moves, color);
+    }
+
+    public List<Integer> filterLegalMoves(List<Integer> moves, int color) {
         return moves;
     }
 
