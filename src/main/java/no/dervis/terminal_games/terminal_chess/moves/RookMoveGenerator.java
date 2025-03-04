@@ -73,48 +73,4 @@ public class RookMoveGenerator implements Board {
         return attacks;
     }
 
-
-
-
-
-
-    // this is the old attacks calculation method before refactoring it above
-    private static long rookAttacks__(int square, long allPieces) {
-        long attacks = 0;
-
-        // North
-        for (int i = square + 8; i < 64; i += 8) {
-            attacks |= 1L << i;
-            if ((allPieces & (1L << i)) != 0) {
-                break;
-            }
-        }
-
-        // South
-        for (int i = square - 8; i >= 0; i -= 8) {
-            attacks |= 1L << i;
-            if ((allPieces & (1L << i)) != 0) {
-                break;
-            }
-        }
-
-        // East
-        for (int i = square + 1; i % 8 != 0; i++) {
-            attacks |= 1L << i;
-            if ((allPieces & (1L << i)) != 0) {
-                break;
-            }
-        }
-
-        // West
-        for (int i = square - 1; i % 8 != 7 && i >= 0; i--) {
-            attacks |= 1L << i;
-            if ((allPieces & (1L << i)) != 0) {
-                break;
-            }
-        }
-
-        return attacks;
-    }
-
 }
