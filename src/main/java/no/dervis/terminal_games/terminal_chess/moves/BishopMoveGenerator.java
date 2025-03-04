@@ -64,40 +64,6 @@ public class BishopMoveGenerator implements Board {
     }
 
     private static long calculateAttacksInDirection(int square, long allPieces, int direction, int edge) {
-        // Initial version from gen. ai:
-//      long attacks = 0;
-//        for (int i = square + direction;
-//             isWithinBoardLimit(i) && i % 8 != edge;
-//             i += direction) {
-//            attacks |= 1L << i;
-//            if ((allPieces & (1L << i)) != 0) {
-//                break;
-//            }
-//        }
-
-        // alternative version without break:
-//        int i = square + direction;
-//        while (isWithinBoardLimit(i) && i % 8 != edge) {
-//            attacks |= 1L << i;
-//            if ((allPieces & (1L << i)) != 0) {
-//                break;
-//            }
-//            i += direction;
-//        }
-
-//        int i = square + direction;
-//
-//        while (isWithinBoardLimit(i) && i % 8 != edge) {
-//            attacks |= 1L << i;
-//            if ((allPieces & (1L << i)) != 0) {
-//                i = -1;   // Forcefully fail the while condition
-//            } else {
-//                i += direction;
-//            }
-//        }
-//        return attacks;
-
-        // alternative version without any imperative loops
         AtomicInteger ai = new AtomicInteger(square + direction);
         long attacks = Stream
                 .iterate(ai.get(), i -> isWithinBoardLimit(i) && i % 8 != edge, _ -> ai.addAndGet(direction))
