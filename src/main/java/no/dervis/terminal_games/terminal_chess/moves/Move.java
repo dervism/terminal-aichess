@@ -1,5 +1,6 @@
 package no.dervis.terminal_games.terminal_chess.moves;
 
+import no.dervis.Pair;
 import no.dervis.terminal_games.terminal_chess.board.Bitboard;
 import no.dervis.terminal_games.terminal_chess.board.Board.Tuple3;
 import no.dervis.terminal_games.terminal_chess.board.Chess;
@@ -62,6 +63,12 @@ public record Move(
                 moveType,
                 promotionPiece
         );
+    }
+
+    public static Pair<Integer, Integer> createMove(int move){
+        int fromSquare = move >>> 14;
+        int toSquare = (move >>> 7) & 0x3F;
+        return new Pair<>(fromSquare, toSquare);
     }
 
     public static int createMove(Tuple3 from, Tuple3 to) {

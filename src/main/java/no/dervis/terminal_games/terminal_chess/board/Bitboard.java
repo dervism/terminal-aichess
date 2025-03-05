@@ -216,6 +216,26 @@ public class Bitboard implements Board, Chess {
         return enemyPieces;
     }
 
+    public long allWhitePieces() {
+        long whites = 0;
+
+        for (int i = 0; i < 6; i++) {
+            whites |= whitePieces[i];
+        }
+
+        return whites;
+    }
+
+    public long allBlackPieces() {
+        long blacks = 0;
+
+        for (int i = 0; i < 6; i++) {
+            blacks |= blackPieces[i];
+        }
+
+        return blacks;
+    }
+
     public long allPieces() {
         long white = 0, black = 0;
 
@@ -225,5 +245,9 @@ public class Bitboard implements Board, Chess {
         }
 
         return white | black;
+    }
+
+    public long kingPiece(int color) {
+        return (color == 0 ? whitePieces[king] : blackPieces[king]);
     }
 }

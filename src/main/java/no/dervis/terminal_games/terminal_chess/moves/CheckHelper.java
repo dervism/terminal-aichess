@@ -82,8 +82,8 @@ public class CheckHelper implements Board, Chess {
                 ? whitePieces[rook] | whitePieces[bishop] | whitePieces[queen]
                 : blackPieces[rook] | blackPieces[bishop] | blackPieces[queen];
 
-        long rookAttackBitboard = getSlidingAttacks(square, RookAttacks.getRookAttacks(square));
-        long bishopAttackBitboard = getSlidingAttacks(square, BishopAttacks.getBishopAttacks(square));
+        long rookAttackBitboard = getSlidingAttacks(square, RookAttacks.getAllRookAttacks(square));
+        long bishopAttackBitboard = getSlidingAttacks(square, BishopAttacks.getAllBishopAttacks(square));
         long slidingAttacks = rookAttackBitboard | bishopAttackBitboard;
         return (slidingAttacks & attackingPieces) != 0;
     }
