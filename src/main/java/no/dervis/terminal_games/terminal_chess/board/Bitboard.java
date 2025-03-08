@@ -57,10 +57,8 @@ public class Bitboard implements Board, Chess {
     }
 
     public void setPiece(int pieceType, int color, int squareIndex) {
-        long bit = 1L << squareIndex;
-
         long[] pieces = color == 0 ? whitePieces : blackPieces;
-        pieces[pieceType] |= bit;
+        pieces[pieceType] |= 1L << squareIndex;
     }
 
     public void removePiece(int pieceType, int color, int squareIndex) {

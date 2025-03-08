@@ -6,6 +6,8 @@ import no.dervis.terminal_games.terminal_chess.board.Board;
 import java.util.ArrayList;
 import java.util.List;
 
+import static no.dervis.terminal_games.terminal_chess.board.Chess.pawn;
+
 public class PawnMoveGenerator implements Board {
 
     private final long[] whitePieces;
@@ -19,13 +21,12 @@ public class PawnMoveGenerator implements Board {
     public List<Integer> generatePawnMoves(int color, long enPassantTarget) {
         List<Integer> moves = new ArrayList<>();
 
-        long pawns = color == 0 ? whitePieces[0] : blackPieces[0];
+        long pawns = color == 0 ? whitePieces[pawn] : blackPieces[pawn];
         long ownPieces = 0, enemyPieces = 0;
         for (int i = 0; i < 6; i++) {
             ownPieces |= (color == 0 ? whitePieces[i] : blackPieces[i]);
             enemyPieces |= (color == 0 ? blackPieces[i] : whitePieces[i]);
         }
-        long emptySquares = ~(ownPieces | enemyPieces);
 
         // Generate single pawn moves
         long allPieces = ownPieces | enemyPieces;
