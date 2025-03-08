@@ -250,4 +250,24 @@ public class Bitboard implements Board, Chess {
     public long kingPiece(int color) {
         return (color == 0 ? whitePieces[king] : blackPieces[king]);
     }
+
+    public long getRooks(int color) {
+        return (color == 0 ? whitePieces[rook] : blackPieces[rook]);
+    }
+
+    public long getBishops(int color) {
+        return (color == 0 ? whitePieces[bishop] : blackPieces[bishop]);
+    }
+
+    public long getQueens(int color) {
+        return (color == 0 ? whitePieces[queen] : blackPieces[queen]);
+    }
+
+    public long getKnights(int color) {
+        return (color == 0 ? whitePieces[knight] : blackPieces[knight]);
+    }
+
+    public long getPawns(int color) {
+        return (color == 0 ? whitePieces[pawn] : blackPieces[pawn]);
+    }
 }
