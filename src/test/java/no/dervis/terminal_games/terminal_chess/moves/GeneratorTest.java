@@ -5,8 +5,10 @@ import no.dervis.terminal_games.terminal_chess.board.Chess;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.List;
+
+import static no.dervis.terminal_games.terminal_chess.board.Board.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 class GeneratorTest implements Chess {
     private Generator generator;
@@ -215,5 +217,54 @@ class GeneratorTest implements Chess {
         System.out.println(boardToStr.apply(board, true));
 
         assertTrue(generator.isKingInCheck(white, 28));
+    }
+
+    @Test
+    void testKingInCheckScenario() {
+        Bitboard board = new Bitboard();
+        board.setPiece(rook, black, a8.index());
+        board.setPiece(queen, black, d8.index());
+        board.setPiece(king, black, e8.index());
+        board.setPiece(bishop, black, f8.index());
+        board.setPiece(rook, black, h8.index());
+        board.setPiece(pawn, black, a7.index());
+        board.setPiece(pawn, black, b7.index());
+        board.setPiece(pawn, black, c7.index());
+        board.setPiece(pawn, black, e7.index());
+        board.setPiece(pawn, black, f7.index());
+        board.setPiece(pawn, black, h7.index());
+        board.setPiece(knight, black, h6.index());
+        board.setPiece(pawn, white, g6.index());
+        board.setPiece(pawn, black, d6.index());
+        board.setPiece(king, white, e1.index());
+        board.setPiece(pawn, white, a2.index());
+        board.setPiece(pawn, white, b2.index());
+        board.setPiece(pawn, white, c2.index());
+        board.setPiece(pawn, white, f2.index());
+        board.setPiece(pawn, white, g2.index());
+        board.setPiece(pawn, white, h2.index());
+        board.setPiece(pawn, white, d4.index());
+        board.setPiece(bishop, white, c4.index());
+        board.setPiece(bishop, white, c1.index());
+        board.setPiece(knight, black, b4.index());
+        board.setPiece(knight, white, b1.index());
+        board.setPiece(rook, white, a1.index());
+        board.setPiece(rook, white, h1.index());
+        board.setPiece(queen, white, f3.index());
+
+        board.makeMove(Move.createMove(f3.index(), f7.index(), MoveType.NORMAL.ordinal()));
+
+        System.out.println(boardToStr.apply(board, false));
+
+        assertEquals(queen, board.getPiece(f7.index()));
+
+        Generator generator = new Generator(board);
+
+        boolean blackKingInCheck = generator.isKingInCheck(black, e8.index());
+        assertTrue(blackKingInCheck, "Black king should be in check due to the white queen on F7.");
+
+        List<Integer> moves = generator.generateMoves(board.turn());
+
+        assertEquals(2, moves.size(), "There should be two moves to get the king out of check.");
     }
 }
