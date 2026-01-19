@@ -51,7 +51,7 @@ public class MinMaxAlgorithm {
         int bestMove = -1;
         int adaptiveDepth = getAdaptiveDepth(game.getBoardSize());
 
-        System.out.println("Using adaptive depth: " + adaptiveDepth + " for board size: " + game.getBoardSize() + "x" + game.getBoardSize());
+        System.out.println("Using adaptive depth " + adaptiveDepth + "-" + game.getBoardSize() + "x" + game.getBoardSize());
 
         List<TicTacToe.Cell> availableMoves = game.getFreeSquares(game.board());
         availableMoves = sortMoves(availableMoves, game);
