@@ -57,8 +57,10 @@ public class Bitboard implements Board, Chess {
     }
 
     public void setPiece(int pieceType, int color, int squareIndex) {
+        long bit = 1L << squareIndex;
+
         long[] pieces = color == 0 ? whitePieces : blackPieces;
-        pieces[pieceType] |= 1L << squareIndex;
+        pieces[pieceType] |= bit;
     }
 
     public void removePiece(int pieceType, int color, int squareIndex) {
@@ -100,6 +102,11 @@ public class Bitboard implements Board, Chess {
         int promotionPiece = move & 0xF;
 
         int piece = getPiece(fromSquare);
+
+        if (piece == -1) {
+            throw new IllegalArgumentException("No piece at square " + fromSquare);
+        }
+
         int color = piece / 6;
         int pieceType = piece % 6;
 
