@@ -45,11 +45,60 @@ public class PawnMoveGenerator implements Board {
 
             // Check if destination square is within bounds and empty
             if (toSquare >= 0 && toSquare < 64) {
-                long toSquareMask = 1L << toSquare;
-                // Check if destination is empty and not blocked by own pieces
-                if ((toSquareMask & allPieces) == 0 && (toSquareMask & ownPieces) == 0) {
-                    singleMoves |= toSquareMask;
-                    isPromotionMove(color, moves, toSquareMask, toSquare, fromSquare);
+                // Get ranks for the squares
+                int fromRank = fromSquare / 8;
+                int toRank = toSquare / 8;
+                // Check if move is in correct direction (white moves up in rank, black moves down)
+                if ((color == 0 && toRank > fromRank) || (color == 1 && toRank < fromRank)) {
+                    long toSquareMask = 1L << toSquare;
+                    // Check if destination is empty
+                    if ((toSquareMask & allPieces) == 0) {
+                        // Check if this pawn could capture other friendly pawns
+                        int file = fromSquare % 8;
+                        boolean couldCapture = false;
+
+                        // Only check for potential captures if this is a forward move from rank 5/4 for white/black
+                        if ((color == 0 && fromRank == 4) || (color == 1 && fromRank == 3)) {
+                            // For white pawns on rank 5, check if there are white pawns on rank 4 that could be captured
+                            if (color == 0) {
+                                // Check diagonal squares one rank behind
+                                if (file > 0) {
+                                    int leftSquare = fromSquare - 9; // One rank back, one file left
+                                    if (leftSquare >= 0 && ((1L << leftSquare) & ownPieces) != 0) {
+                                        couldCapture = true;
+                                    }
+                                }
+                                if (file < 7) {
+                                    int rightSquare = fromSquare - 7; // One rank back, one file right
+                                    if (rightSquare >= 0 && ((1L << rightSquare) & ownPieces) != 0) {
+                                        couldCapture = true;
+                                    }
+                                }
+                            } else {
+                                // For black pawns on rank 4, check if there are black pawns on rank 5 that could be captured
+                                if (file > 0) {
+                                    int leftSquare = fromSquare + 7; // One rank forward, one file left
+                                    if (leftSquare < 64 && ((1L << leftSquare) & ownPieces) != 0) {
+                                        couldCapture = true;
+                                    }
+                                }
+                                if (file < 7) {
+                                    int rightSquare = fromSquare + 9; // One rank forward, one file right
+                                    if (rightSquare < 64 && ((1L << rightSquare) & ownPieces) != 0) {
+                                        couldCapture = true;
+                                    }
+                                }
+                            }
+                        }
+
+                        // Generate move if either:
+                        // 1. The pawn is not on rank 5/4 (for white/black), or
+                        // 2. The pawn is on rank 5/4 but couldn't capture other pawns
+                        if (!couldCapture) {
+                            singleMoves |= toSquareMask;
+                            isPromotionMove(color, moves, toSquareMask, toSquare, fromSquare);
+                        }
+                    }
                 }
             }
             remainingPawns &= remainingPawns - 1;
