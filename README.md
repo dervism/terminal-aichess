@@ -49,3 +49,6 @@ PS: This is still work in progress. The game works, but will only respond with r
 - [x] Implement basic move generation
 - [x] Implement complete move generation (forward and backward moves, jump moves)
 - [ ] Implement basic ai (minimax with 𝛼/ϐ cutoff)
+
+## Documentation
+https://deepwiki.com/dervism/terminal-aichess
