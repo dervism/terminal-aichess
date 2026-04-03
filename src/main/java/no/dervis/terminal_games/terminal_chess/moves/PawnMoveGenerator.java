@@ -30,11 +30,6 @@ public class PawnMoveGenerator implements Board {
 
         // Generate single pawn moves
         long allPieces = ownPieces | enemyPieces;
-        System.out.println("[DEBUG_LOG] Pawns: " + Long.toBinaryString(pawns));
-        System.out.println("[DEBUG_LOG] All pieces: " + Long.toBinaryString(allPieces));
-
-        // Generate single pawn moves
-        System.out.println("[DEBUG_LOG] Pawns before shift: 0x" + Long.toHexString(pawns));
 
         // Process each pawn for potential moves
         long remainingPawns = pawns;
@@ -103,15 +98,10 @@ public class PawnMoveGenerator implements Board {
             }
             remainingPawns &= remainingPawns - 1;
         }
-        System.out.println("[DEBUG_LOG] Single moves: " + Long.toBinaryString(singleMoves));
 
         // Generate double moves from starting position
         // White pawns start on rank 2 (0xFF00), black pawns on rank 7 (0xFF00000000000000)
         long startRank = color == 0 ? 0xFF00L : 0xFF00000000000000L;
-        System.out.println("[DEBUG_LOG] Start rank value: 0x" + Long.toHexString(startRank));
-        System.out.println("[DEBUG_LOG] Pawns at start: 0x" + Long.toHexString(pawns & startRank));
-        System.out.println("[DEBUG_LOG] Start rank: " + Long.toBinaryString(startRank));
-        System.out.println("[DEBUG_LOG] Pawns on start rank: " + Long.toBinaryString(pawns & startRank));
 
         long startPawns = pawns & startRank;
         while (startPawns != 0) {
@@ -119,17 +109,12 @@ public class PawnMoveGenerator implements Board {
             int midSquare = color == 0 ? fromSquare + 8 : fromSquare - 8;
             int toSquare = color == 0 ? fromSquare + 16 : fromSquare - 16;
 
-            System.out.println("[DEBUG_LOG] Double move check: from=" + fromSquare + 
-                             " mid=" + midSquare + " to=" + toSquare);
-
             // Check if both squares in the path are empty and within bounds
             if (toSquare >= 0 && toSquare < 64 && midSquare >= 0 && midSquare < 64) {
                 long midSquareMask = 1L << midSquare;
                 long toSquareMask = 1L << toSquare;
                 boolean midEmpty = (midSquareMask & allPieces) == 0;
                 boolean toEmpty = (toSquareMask & allPieces) == 0;
-                System.out.println("[DEBUG_LOG] Mid square empty: " + midEmpty + 
-                                 " To square empty: " + toEmpty);
 
                 if (midEmpty && toEmpty) {
                     moves.add((fromSquare << 14) | (toSquare << 7));

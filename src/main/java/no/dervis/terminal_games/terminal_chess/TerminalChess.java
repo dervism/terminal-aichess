@@ -46,6 +46,12 @@ public class TerminalChess implements BoardPrinter {
             if (userTurn == board.turn()) {
                 userInput = getMoveFromUser();
 
+                if (userInput.equals("q")) {
+                    scanner.close();
+                    System.out.println("Quitting.");
+                    break;
+                }
+
                 List<Integer> userMoves = generator.generateMoves(board.turn());
                 var parsedInput = parseMove(userInput);
                 parsedInput.flatMap(
@@ -57,9 +63,6 @@ public class TerminalChess implements BoardPrinter {
                                 .findFirst())
                         .ifPresentOrElse(legalUserMove -> board.makeMove(legalUserMove.left()),
                                 () -> System.out.println("Please enter a legal move."));
-
-                List<Integer> computerMoves = generator.generateMoves(board.turn());
-                getMoveFromComputer(computerMoves, board);
             } else {
                 List<Integer> computerMoves = generator.generateMoves(board.turn());
                 getMoveFromComputer(computerMoves, board);
@@ -68,18 +71,27 @@ public class TerminalChess implements BoardPrinter {
             clearTerminal();
             System.out.println(Chess.boardToStr.apply(board, userColor));
 
-            /*if (board.isCheckmate()) {
-                System.out.println("Checkmate!");
-                status = false;
-            } else if (board.isDraw()) {
-                System.out.println("Draw!");
-                status = false;
-            }*/
-
-            if (userInput.equals("q")) {
-                scanner.close();
-                System.out.println("Quitting.");
-                status = false;
+            Generator.GameState gameState = generator.getGameState(board.turn());
+            switch (gameState) {
+                case CHECKMATE -> {
+                    int loser = board.turn();
+                    System.out.println("Checkmate! " + (loser == white ? "Black" : "White") + " wins!");
+                    status = false;
+                }
+                case STALEMATE -> {
+                    System.out.println("Draw by stalemate!");
+                    status = false;
+                }
+                case INSUFFICIENT_MATERIAL -> {
+                    System.out.println("Draw by insufficient material!");
+                    status = false;
+                }
+                case ONGOING -> {
+                    int kingSquare = Long.numberOfTrailingZeros(board.kingPiece(board.turn()));
+                    if (Generator.isKingInCheck(board, board.turn(), kingSquare)) {
+                        System.out.println("Check!");
+                    }
+                }
             }
         }
     }

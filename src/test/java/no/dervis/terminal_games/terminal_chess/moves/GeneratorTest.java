@@ -29,7 +29,7 @@ class GeneratorTest implements Chess {
 
         System.out.println(boardToStr.apply(board, true));
 
-        assertTrue(generator.isKingInCheck(white, 4));
+        assertTrue(Generator.isKingInCheck(board, white, 4));
     }
 
     @Test
@@ -41,7 +41,7 @@ class GeneratorTest implements Chess {
 
         System.out.println(boardToStr.apply(board, true));
 
-        assertTrue(generator.isKingInCheck(white, 4));
+        assertTrue(Generator.isKingInCheck(board, white, 4));
     }
 
     @Test
@@ -53,7 +53,7 @@ class GeneratorTest implements Chess {
 
         System.out.println(boardToStr.apply(board, true));
 
-        assertTrue(generator.isKingInCheck(white, 4));
+        assertTrue(Generator.isKingInCheck(board, white, 4));
     }
 
     @Test
@@ -65,7 +65,7 @@ class GeneratorTest implements Chess {
 
         System.out.println(boardToStr.apply(board, true));
 
-        assertTrue(generator.isKingInCheck(white, 4));
+        assertTrue(Generator.isKingInCheck(board, white, 4));
     }
 
     @Test
@@ -77,7 +77,7 @@ class GeneratorTest implements Chess {
 
         System.out.println(boardToStr.apply(board, true));
 
-        assertTrue(generator.isKingInCheck(white, 28));
+        assertTrue(Generator.isKingInCheck(board, white, 28));
     }
 
     @Test
@@ -89,7 +89,7 @@ class GeneratorTest implements Chess {
 
         System.out.println(boardToStr.apply(board, true));
 
-        assertTrue(generator.isKingInCheck(white, 4));
+        assertTrue(Generator.isKingInCheck(board, white, 4));
     }
 
     @Test
@@ -101,7 +101,7 @@ class GeneratorTest implements Chess {
 
         System.out.println(boardToStr.apply(board, true));
 
-        assertFalse(generator.isKingInCheck(white, 4));
+        assertFalse(Generator.isKingInCheck(board, white, 4));
     }
 
     @Test
@@ -115,7 +115,7 @@ class GeneratorTest implements Chess {
 
         System.out.println(boardToStr.apply(board, true));
 
-        assertFalse(generator.isKingInCheck(white, 4));
+        assertFalse(Generator.isKingInCheck(board, white, 4));
     }
 
     @Test
@@ -129,7 +129,7 @@ class GeneratorTest implements Chess {
 
         System.out.println(boardToStr.apply(board, true));
 
-        assertFalse(generator.isKingInCheck(white, 4));
+        assertFalse(Generator.isKingInCheck(board, white, 4));
     }
 
     @Test
@@ -143,7 +143,7 @@ class GeneratorTest implements Chess {
 
         System.out.println(boardToStr.apply(board, true));
 
-        assertFalse(generator.isKingInCheck(white, 4));
+        assertFalse(Generator.isKingInCheck(board, white, 4));
     }
 
     @Test
@@ -157,7 +157,7 @@ class GeneratorTest implements Chess {
 
         System.out.println(boardToStr.apply(board, true));
 
-        assertFalse(generator.isKingInCheck(white, 4));
+        assertFalse(Generator.isKingInCheck(board, white, 4));
     }
 
     @Test
@@ -171,7 +171,7 @@ class GeneratorTest implements Chess {
 
         System.out.println(boardToStr.apply(board, true));
 
-        assertFalse(generator.isKingInCheck(white, 4));
+        assertFalse(Generator.isKingInCheck(board, white, 4));
     }
 
     @Test
@@ -185,7 +185,7 @@ class GeneratorTest implements Chess {
 
         System.out.println(boardToStr.apply(board, true));
 
-        assertFalse(generator.isKingInCheck(white, 4));
+        assertFalse(Generator.isKingInCheck(board, white, 4));
     }
 
     @Test
@@ -201,7 +201,7 @@ class GeneratorTest implements Chess {
 
         System.out.println(boardToStr.apply(board, true));
 
-        assertTrue(generator.isKingInCheck(white, 4));
+        assertTrue(Generator.isKingInCheck(board, white, 4));
     }
 
     @Test
@@ -216,7 +216,7 @@ class GeneratorTest implements Chess {
 
         System.out.println(boardToStr.apply(board, true));
 
-        assertTrue(generator.isKingInCheck(white, 28));
+        assertTrue(Generator.isKingInCheck(board, white, 28));
     }
 
     @Test
@@ -260,11 +260,11 @@ class GeneratorTest implements Chess {
 
         Generator generator = new Generator(board);
 
-        boolean blackKingInCheck = generator.isKingInCheck(black, e8.index());
+        boolean blackKingInCheck = Generator.isKingInCheck(board, black, e8.index());
         assertTrue(blackKingInCheck, "Black king should be in check due to the white queen on F7.");
 
         List<Integer> moves = generator.generateMoves(board.turn());
 
-        assertEquals(2, moves.size(), "There should be two moves to get the king out of check.");
+        assertEquals(2, moves.size(), "There should be two moves to get the king out of check: Kd7 and Nxf7.");
     }
 }

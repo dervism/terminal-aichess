@@ -16,6 +16,51 @@ public class Generator implements Chess {
         this.board = board;
     }
 
+    public enum GameState {
+        ONGOING, CHECKMATE, STALEMATE, INSUFFICIENT_MATERIAL
+    }
+
+    public GameState getGameState(int color) {
+        if (hasInsufficientMaterial()) return GameState.INSUFFICIENT_MATERIAL;
+
+        List<Integer> legalMoves = generateMoves(color);
+        if (!legalMoves.isEmpty()) return GameState.ONGOING;
+
+        int kingSquare = Long.numberOfTrailingZeros(board.kingPiece(color));
+        if (isKingInCheck(board, color, kingSquare)) return GameState.CHECKMATE;
+
+        return GameState.STALEMATE;
+    }
+
+    public boolean hasInsufficientMaterial() {
+        long whitePawns = board.getPawns(white);
+        long blackPawns = board.getPawns(black);
+        long whiteRooks = board.getRooks(white);
+        long blackRooks = board.getRooks(black);
+        long whiteQueens = board.getQueens(white);
+        long blackQueens = board.getQueens(black);
+
+        if ((whitePawns | blackPawns | whiteRooks | blackRooks | whiteQueens | blackQueens) != 0) {
+            return false;
+        }
+
+        long whiteKnights = board.getKnights(white);
+        long blackKnights = board.getKnights(black);
+        long whiteBishops = board.getBishops(white);
+        long blackBishops = board.getBishops(black);
+
+        int whiteMinorCount = Long.bitCount(whiteKnights) + Long.bitCount(whiteBishops);
+        int blackMinorCount = Long.bitCount(blackKnights) + Long.bitCount(blackBishops);
+
+        // King vs King
+        if (whiteMinorCount == 0 && blackMinorCount == 0) return true;
+        // King+minor vs King
+        if (whiteMinorCount <= 1 && blackMinorCount == 0) return true;
+        if (whiteMinorCount == 0 && blackMinorCount <= 1) return true;
+
+        return false;
+    }
+
     public List<Integer> generateMoves(int color) {
         List<Integer> moves = new ArrayList<>();
         long enPassantTarget = getEnPassantTarget(Objects.requireNonNullElse(board.history().peekLast(), 0));
@@ -30,15 +75,14 @@ public class Generator implements Chess {
 
     public List<Integer> filterLegalMoves(List<Integer> moves, int color) {
         List<Integer> legalMoves = new ArrayList<>();
-        int kingSquare = Long.numberOfTrailingZeros(board.kingPiece(color));
 
         for (int move : moves) {
             Bitboard copy = board.copy();
             copy.makeMove(move);
-            if (!isKingInCheck(color, kingSquare)) {
+            int kingSquare = Long.numberOfTrailingZeros(copy.kingPiece(color));
+            if (!isKingInCheck(copy, color, kingSquare)) {
                 legalMoves.add(move);
             }
-
         }
         return legalMoves;
     }
@@ -59,7 +103,7 @@ public class Generator implements Chess {
         return movesAttacks;
     }
 
-    boolean isKingInCheck(int color, int kingSquare) {
+    public static boolean isKingInCheck(Bitboard board, int color, int kingSquare) {
         // Get attack masks for all piece types
         long rookAttacksMask = RookAttacks.getAllRookAttacks(kingSquare);
         long bishopAttacksMask = BishopAttacks.getAllBishopAttacks(kingSquare);
@@ -104,7 +148,7 @@ public class Generator implements Chess {
         return false;
     }
 
-    private long getBetweenMask(int square1, int square2) {
+    private static long getBetweenMask(int square1, int square2) {
         int rank1 = square1 / 8, file1 = square1 % 8;
         int rank2 = square2 / 8, file2 = square2 % 8;
         long mask = 0L;

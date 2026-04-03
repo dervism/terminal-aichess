@@ -30,7 +30,11 @@ public class Checkers {
         }
     }
 
-    public record Position(int row, int col) {}
+    public record Position(int row, int col) {
+        public Cell toCell() {
+            return Cell.fromCellNumber((row() * 8) + col() + 1);
+        }
+    }
     public record Cell(Integer cellNr, Position position) {
             static Cell fromCellNumber(int cellNr) {
             int row = (cellNr - 1) / 8;

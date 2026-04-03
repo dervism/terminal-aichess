@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static java.lang.IO.println;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -57,13 +58,17 @@ class CheckersTest {
        Checkers.Cell blackCell = new Checkers.Cell(30, new Checkers.Position(3,6));
        List<Checkers.Move> validBlackMoves = checkers.generateSimpleMoves(playerBlack, blackCell, Checkers.Color.BLACK, board);
 
-       // There should be a single valid move for the black player from this cell at the start of the game
-       assertEquals(1, validBlackMoves.size());
+       checkers.prettyPrintBoard();
+
+       assertEquals(2, validBlackMoves.size());
 
        Checkers.Move blackMove = validBlackMoves.get(0);
-
        assertEquals(blackCell, blackMove.from());
-       assertEquals(new Checkers.Cell(25, new Checkers.Position(3,1)), blackMove.to());
+       assertEquals(new Checkers.Position(4,7).toCell(), blackMove.to());
+
+       Checkers.Move blackMove2 = validBlackMoves.get(1);
+       assertEquals(blackCell, blackMove2.from());
+       assertEquals(new Checkers.Position(4,5).toCell(), blackMove2.to());
    }
 
    @Test
@@ -78,16 +83,18 @@ class CheckersTest {
        // There should be no valid moves for the white player from this cell at the start of the game
        assertEquals(0, validWhiteMovesInitial.size());
 
-       Checkers.Cell whiteCell = new Checkers.Cell(41, new Checkers.Position(5,1));
+       Checkers.Cell whiteCell = new Checkers.Position(6,0).toCell();
        List<Checkers.Move> validWhiteMoves = checkers.generateSimpleMoves(playerWhite, whiteCell, Checkers.Color.WHITE, board);
+
+       checkers.prettyPrintBoard();
+       println(validWhiteMoves);
 
        // There should be a single valid move for the white player from this cell at the start of the game
        assertEquals(1, validWhiteMoves.size());
 
        Checkers.Move whiteMove = validWhiteMoves.get(0);
-
        assertEquals(whiteCell, whiteMove.from());
-       assertEquals(new Checkers.Cell(34, new Checkers.Position(4, 2)), whiteMove.to());
+       assertEquals(new Checkers.Position(5, 1).toCell(), whiteMove.to());
    }
 
    @Test
@@ -116,11 +123,13 @@ class CheckersTest {
        Checkers.Player playerWhite = new Checkers.Player("Player 1", Checkers.Color.WHITE);
        Checkers.Player playerBlack = new Checkers.Player("Player 2", Checkers.Color.BLACK);
 
-       Checkers.Cell whiteCell = new Checkers.Cell(41, new Checkers.Position(5,1));
-       Checkers.Cell blackCell = new Checkers.Cell(24, new Checkers.Position(3,0));
+       Checkers.Cell whiteCell = new Checkers.Position(5,0).toCell();
+       Checkers.Cell blackCell = new Checkers.Position(3,0).toCell();
 
        List<Checkers.Move> validWhiteMoves = checkers.generateSimpleMoves(playerWhite, whiteCell, Checkers.Color.WHITE, board);
        List<Checkers.Move> validBlackMoves = checkers.generateSimpleMoves(playerBlack, blackCell, Checkers.Color.BLACK, board);
+
+       checkers.prettyPrintBoard();
 
        assertEquals(1, validWhiteMoves.size());
        assertEquals(1, validBlackMoves.size());
@@ -131,7 +140,7 @@ class CheckersTest {
        assertEquals(whiteCell, whiteMove.from());
        assertEquals(blackCell, blackMove.from());
 
-       assertEquals(new Checkers.Cell(34, new Checkers.Position(4, 2)), whiteMove.to());
-       assertEquals(new Checkers.Cell(31, new Checkers.Position(3, 7)), blackMove.to());
+       assertEquals(new Checkers.Position(4, 1).toCell(), whiteMove.to());
+       assertEquals(new Checkers.Position(4, 1).toCell(), blackMove.to());
    }
 }
