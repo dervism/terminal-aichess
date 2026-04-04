@@ -18,6 +18,8 @@ In your terminal, this is what the app will look like.
 
 <img height="256" src="board.png" width="250"/>
 
+The input format is coordinate-based, not real chess notation. To move the e2 pawn to e4, you enter e2-e4. Similarly, to move the bishop to c4, you enter f1-c4, etc.
+
 **TODOs:**
 - [x] Implement basic bitboard
 - [x] Implement terminal ui
