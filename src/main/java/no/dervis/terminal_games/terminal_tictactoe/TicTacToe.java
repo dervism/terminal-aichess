@@ -1,6 +1,7 @@
 package no.dervis.terminal_games.terminal_tictactoe;
 
 import no.dervis.Pair;
+import no.dervis.terminal_games.game_ai.AlphaBetaSearch;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +27,8 @@ public class TicTacToe {
         }
     }
 
+    private final AlphaBetaSearch<Integer> search;
+    private final long thinkTimeMs;
     public int xInARow;
     public int boardSize;
 
@@ -35,21 +38,25 @@ public class TicTacToe {
     private final Board board;
     public Board board() { return board; }
 
-    private final MinMaxAlgorithm minMax;
 
     public TicTacToe() {
         this(3, 3 * 3);
     }
 
     public TicTacToe(int xInARow, int boardSize) {
+        this(xInARow, boardSize, 2000);
+    }
+
+    public TicTacToe(int xInARow, int boardSize, long thinkTimeMs) {
         this.xInARow = xInARow;
         this.boardSize = boardSize;
+        this.thinkTimeMs = thinkTimeMs;
         this.board = new Board(boardSize,
                 new ArrayList<>(
                         range(0,boardSize).mapToObj(_ -> PlayerSymbol.E).toList()
                 )
         );
-        this.minMax = new MinMaxAlgorithm(6);
+        this.search = new AlphaBetaSearch<>(new TicTacToeEvaluation());
     }
 
     // pretty print the complete board with row and column numbers, and cell values (E should printed as " ")
@@ -80,17 +87,36 @@ public class TicTacToe {
     }
 
     // read user move from terminal
-    public int readUserMove() {
-        Scanner scanner = new Scanner(System.in);
-        System.out.print("Enter your move: ");
-        String input = scanner.nextLine();
-        String[] arr = input.split("-");
-
-        return (int) ((Integer.parseInt(arr[0]) - 1) * Math.sqrt(boardSize) + (Integer.parseInt(arr[1]) - 1));
+    public int readUserMove(Scanner scanner) {
+        int size = (int) Math.sqrt(boardSize);
+        while (true) {
+            System.out.print("Enter your move (row-col, e.g. 1-2): ");
+            String input = scanner.nextLine().trim();
+            String[] arr = input.split("-");
+            if (arr.length != 2) {
+                System.out.println("Invalid format. Use row-col, e.g. 1-2.");
+                continue;
+            }
+            try {
+                int row = Integer.parseInt(arr[0]) - 1;
+                int col = Integer.parseInt(arr[1]) - 1;
+                if (row < 0 || row >= size || col < 0 || col >= size) {
+                    System.out.println("Out of bounds. Row and column must be 1-" + size + ".");
+                    continue;
+                }
+                int pos = row * size + col;
+                if (getCellValue(pos) != PlayerSymbol.E) {
+                    System.out.println("That square is already taken.");
+                    continue;
+                }
+                return pos;
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid numbers. Use row-col, e.g. 1-2.");
+            }
+        }
     }
 
-    public boolean askToPlayFirstOrSecond() {
-        Scanner scanner = new Scanner(System.in);
+    public boolean askToPlayFirstOrSecond(Scanner scanner) {
         System.out.print("Play first or second? (f/s): ");
         String input = scanner.nextLine();
         return input.equalsIgnoreCase("s");
@@ -99,17 +125,18 @@ public class TicTacToe {
     // play the game, each player makes a move in turn
     // then print out the board
     public State playGame() {
+        Scanner scanner = new Scanner(System.in);
         System.out.println(prettyPrintBoard());
         State state = State.InProgress;
 
-        if (askToPlayFirstOrSecond()) {
+        if (askToPlayFirstOrSecond(scanner)) {
             Pair<State, Integer> nextState = makeComputerMove();
             System.out.println(prettyPrintBoard());
             state = nextState.left();
         }
 
         while (state == State.InProgress) {
-            int userMove = readUserMove();
+            int userMove = readUserMove(scanner);
             board.cells.set(userMove, PlayerSymbol.X);
             System.out.println(prettyPrintBoard());
             state = checkGameState();
@@ -152,13 +179,19 @@ public class TicTacToe {
     }
 
     private Pair<State, Integer> makeComputerMove() {
-        int computerMove = minMax.findBestMove(this);
-        setMove(computerMove, PlayerSymbol.O);
-        return new Pair<>(checkGameState(), computerMove);
-    }
-
-    private boolean hasFreeSquares(Board board) {
-        return !getFreeSquares(board).isEmpty();
+        System.out.print("Thinking...");
+        TicTacToeState state = new TicTacToeState(this, PlayerSymbol.O);
+        int size = (int) Math.sqrt(boardSize);
+        var result = (size <= 3)
+                ? search.findBestMove(state, 10)              // full search for 3×3
+                : search.findBestMove(state, thinkTimeMs);    // time-limited for larger boards
+        int move = result.move();
+        int row = move / size + 1;
+        int col = move % size + 1;
+        System.out.printf(" Computer plays %d-%d (depth %d, %d nodes)%n",
+                row, col, result.depth(), result.nodes());
+        setMove(move, PlayerSymbol.O);
+        return new Pair<>(checkGameState(), move);
     }
 
     public List<Cell> getFreeSquares(Board board) {
@@ -238,9 +271,30 @@ public class TicTacToe {
     }
 
 
-    public static void main(String[] args) {
-        new TicTacToe(4, 6*6).playGame();
-        //new TicTacToe().playGame();
+    static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+
+        // Board size
+        System.out.print("Board size (e.g. 3x3, 6x6, 8x8): ");
+        String sizeInput = scanner.nextLine().trim().toLowerCase();
+        int side = 3;
+        if (sizeInput.contains("x")) {
+            String[] parts = sizeInput.split("x");
+            side = Integer.parseInt(parts[0]);
+        }
+        int xInARow = Math.min(side, 5); // cap win-length at 5 for large boards
+
+        // Difficulty
+        System.out.println("AI think time in seconds (e.g. 1, 3, 10): ");
+        String timeInput = scanner.nextLine().trim();
+        long thinkTimeMs = 2000;
+        try { thinkTimeMs = Long.parseLong(timeInput) * 1000; }
+        catch (NumberFormatException ignored) {}
+
+        System.out.printf("Playing %dx%d with %d-in-a-row, AI thinks %ds%n",
+                side, side, xInARow, thinkTimeMs / 1000);
+
+        new TicTacToe(xInARow, side * side, thinkTimeMs).playGame();
     }
 
 }

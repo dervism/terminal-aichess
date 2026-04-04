@@ -54,6 +54,15 @@ public class Checkers {
         }
     }
 
+    public Move generateRandomComputerMove(Player player, Board board) {
+        List<Move> validMoves = generateAllValidMoves(player, board);
+        if (validMoves.isEmpty()) {
+            return null;
+        }
+        Random rand = new Random();
+        return validMoves.get(rand.nextInt(validMoves.size()));
+    }
+
     public List<Move> generateAllValidMoves(Player player, Board board) {
         List<Move> validMoves = new ArrayList<>();
         Map<Cell, Color> cells = board.cells();
@@ -173,17 +182,6 @@ public class Checkers {
         return false;
     }
 
-
-    public Move generateRandomComputerMove(Player player, Board board) {
-        List<Move> validMoves = generateAllValidMoves(player, board);
-        if (validMoves.isEmpty()) {
-            return null;
-        }
-        Random rand = new Random();
-        return validMoves.get(rand.nextInt(validMoves.size()));
-    }
-
-
     public Board makeMove(Move move, Board board) {
         Map<Cell, Color> newCells = new HashMap<>(board.cells());
         Cell fromCell = move.from();
@@ -257,7 +255,7 @@ public class Checkers {
         System.out.print("    a   b   c   d   e   f   g   h\n");
     }
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         Checkers checkers = new Checkers();
         checkers.prettyPrintBoard();
         Player player1 = new Player("Player 1", Color.WHITE);
