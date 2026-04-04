@@ -1,15 +1,13 @@
-package no.dervis.terminal_games.terminal_chess.moves;
+package no.dervis.terminal_games.terminal_chess.moves.attacks;
 
 import no.dervis.terminal_games.terminal_chess.board.Bitboard;
 import no.dervis.terminal_games.terminal_chess.board.Board;
 import no.dervis.terminal_games.terminal_chess.board.Chess;
-import no.dervis.terminal_games.terminal_chess.moves.attacks.BishopAttacks;
-import no.dervis.terminal_games.terminal_chess.moves.attacks.RookAttacks;
 
 import java.util.stream.IntStream;
 
-import static no.dervis.terminal_games.terminal_chess.moves.BishopMoveGenerator.bishopAttacks;
-import static no.dervis.terminal_games.terminal_chess.moves.RookMoveGenerator.rookAttacks;
+import static no.dervis.terminal_games.terminal_chess.moves.generator.BishopMoveGenerator.bishopAttacks;
+import static no.dervis.terminal_games.terminal_chess.moves.generator.RookMoveGenerator.rookAttacks;
 
 public class CheckHelper implements Board, Chess {
 

@@ -30,7 +30,7 @@ public class QueenAttacks {
         return queenAttacks[square];
     }
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         int square = Bitboard.e1.index();
         Bitboard board = new Bitboard();
         long attacks = getAllQueenAttacks(square);
@@ -39,7 +39,7 @@ public class QueenAttacks {
                 board.setPiece(Chess.queen, Chess.white, i);
             }
         }
-        // visualise the attacks on an empty board
+        // visualize the attacks on an empty board
         System.out.println(Chess.boardToStr.apply(board, true));
     }
 }

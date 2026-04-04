@@ -1,10 +1,11 @@
-package no.dervis.terminal_games.terminal_chess.moves;
+package no.dervis.terminal_games.terminal_chess.moves.generator;
 
 import no.dervis.terminal_games.terminal_chess.board.Bitboard;
 import no.dervis.terminal_games.terminal_chess.board.Chess;
+import no.dervis.terminal_games.terminal_chess.board.MagicBitboard;
+import no.dervis.terminal_games.terminal_chess.moves.Move;
 import no.dervis.terminal_games.terminal_chess.moves.attacks.KingAttacks;
 import no.dervis.terminal_games.terminal_chess.moves.attacks.KnightAttacks;
-import no.dervis.terminal_games.terminal_chess.moves.attacks.MagicBitboard;
 import no.dervis.terminal_games.terminal_chess.moves.attacks.PawnAttacks;
 
 import java.util.ArrayList;

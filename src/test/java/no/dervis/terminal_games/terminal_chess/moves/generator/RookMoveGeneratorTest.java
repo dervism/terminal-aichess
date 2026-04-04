@@ -1,8 +1,10 @@
-package no.dervis.terminal_games.terminal_chess.moves;
+package no.dervis.terminal_games.terminal_chess.moves.generator;
 
 import no.dervis.terminal_games.terminal_chess.board.Bitboard;
 import no.dervis.terminal_games.terminal_chess.board.Board;
 import no.dervis.terminal_games.terminal_chess.board.Chess;
+import no.dervis.terminal_games.terminal_chess.moves.Move;
+import no.dervis.terminal_games.terminal_chess.moves.attacks.CheckHelper;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

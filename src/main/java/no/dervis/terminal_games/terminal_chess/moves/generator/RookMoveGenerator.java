@@ -1,8 +1,8 @@
-package no.dervis.terminal_games.terminal_chess.moves;
+package no.dervis.terminal_games.terminal_chess.moves.generator;
 
 import no.dervis.terminal_games.terminal_chess.board.Bitboard;
 import no.dervis.terminal_games.terminal_chess.board.Board;
-import no.dervis.terminal_games.terminal_chess.moves.attacks.MagicBitboard;
+import no.dervis.terminal_games.terminal_chess.board.MagicBitboard;
 
 import java.util.ArrayList;
 import java.util.List;

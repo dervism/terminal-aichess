@@ -44,7 +44,7 @@ public class RookAttacks {
         return rookAttacks[square];
     }
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         int square = Bitboard.h1.index();
         Bitboard board = new Bitboard();
         long attacks = getAllRookAttacks(square);
@@ -53,7 +53,7 @@ public class RookAttacks {
                 board.setPiece(Chess.rook, Chess.white, i);
             }
         }
-        // visualise the attacks on an empty board
+        // visualize the attacks on an empty board
         System.out.println(Chess.boardToStr.apply(board, true));
     }
 }

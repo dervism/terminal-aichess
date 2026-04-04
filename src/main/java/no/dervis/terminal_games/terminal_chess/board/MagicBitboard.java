@@ -1,4 +1,4 @@
-package no.dervis.terminal_games.terminal_chess.moves.attacks;
+package no.dervis.terminal_games.terminal_chess.board;
 
 /**
  * Magic Bitboard implementation for efficient sliding piece attack generation.

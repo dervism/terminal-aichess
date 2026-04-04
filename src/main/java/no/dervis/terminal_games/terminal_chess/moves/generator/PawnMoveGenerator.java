@@ -1,4 +1,4 @@
-package no.dervis.terminal_games.terminal_chess.moves;
+package no.dervis.terminal_games.terminal_chess.moves.generator;
 
 import no.dervis.terminal_games.terminal_chess.board.Bitboard;
 import no.dervis.terminal_games.terminal_chess.board.Board;

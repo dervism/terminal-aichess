@@ -3,8 +3,8 @@ package no.dervis.terminal_games.terminal_chess.ai;
 import no.dervis.terminal_games.terminal_chess.board.Bitboard;
 import no.dervis.terminal_games.terminal_chess.board.Board;
 import no.dervis.terminal_games.terminal_chess.board.Chess;
+import no.dervis.terminal_games.terminal_chess.board.MagicBitboard;
 import no.dervis.terminal_games.terminal_chess.moves.attacks.KnightAttacks;
-import no.dervis.terminal_games.terminal_chess.moves.attacks.MagicBitboard;
 
 /**
  * Static board evaluation function for the chess AI.

@@ -47,7 +47,7 @@ public class KingAttacks {
         return kingAttacks[square];
     }
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         int square = Bitboard.e4.index();
         Bitboard board = new Bitboard();
         
@@ -58,7 +58,7 @@ public class KingAttacks {
             }
         }
         
-        // visualise the attacks on an empty board
+        // visualize the attacks on an empty board
         System.out.println(Chess.boardToStr.apply(board, true));
     }
 }

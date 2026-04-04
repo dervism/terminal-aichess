@@ -1,7 +1,5 @@
-package no.dervis.terminal_games.terminal_chess;
+package no.dervis.terminal_games.terminal_chess.board;
 
-import no.dervis.terminal_games.terminal_chess.board.Bitboard;
-import no.dervis.terminal_games.terminal_chess.board.BoardPrinter;
 import org.junit.jupiter.api.Test;
 
 import static no.dervis.terminal_games.terminal_chess.board.Board.*;

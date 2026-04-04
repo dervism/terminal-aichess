@@ -1,7 +1,7 @@
-package no.dervis.terminal_games.terminal_chess.moves.attacks;
+package no.dervis.terminal_games.terminal_chess.board;
 
-import no.dervis.terminal_games.terminal_chess.moves.BishopMoveGenerator;
-import no.dervis.terminal_games.terminal_chess.moves.RookMoveGenerator;
+import no.dervis.terminal_games.terminal_chess.moves.generator.BishopMoveGenerator;
+import no.dervis.terminal_games.terminal_chess.moves.generator.RookMoveGenerator;
 import org.junit.jupiter.api.Test;
 
 import java.util.Random;

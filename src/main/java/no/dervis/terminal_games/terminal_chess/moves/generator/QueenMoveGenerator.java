@@ -1,4 +1,4 @@
-package no.dervis.terminal_games.terminal_chess.moves;
+package no.dervis.terminal_games.terminal_chess.moves.generator;
 
 import no.dervis.terminal_games.terminal_chess.board.Bitboard;
 import no.dervis.terminal_games.terminal_chess.board.Board;
@@ -6,8 +6,8 @@ import no.dervis.terminal_games.terminal_chess.board.Board;
 import java.util.ArrayList;
 import java.util.List;
 
-import static no.dervis.terminal_games.terminal_chess.moves.BishopMoveGenerator.bishopAttacks;
-import static no.dervis.terminal_games.terminal_chess.moves.RookMoveGenerator.rookAttacks;
+import static no.dervis.terminal_games.terminal_chess.moves.generator.BishopMoveGenerator.bishopAttacks;
+import static no.dervis.terminal_games.terminal_chess.moves.generator.RookMoveGenerator.rookAttacks;
 
 public class QueenMoveGenerator implements Board {
 
