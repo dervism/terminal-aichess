@@ -34,18 +34,20 @@ public interface Chess {
     }
 
     Function<Integer, String> pieceToStr = pieceType -> switch (pieceType) {
-        case pawn    -> " ♙ ";
-        case knight  -> " ♘ ";
-        case bishop  -> " ♗ ";
-        case rook    -> " ♖ ";
-        case queen   -> " ♕ ";
-        case king -> " ♔ ";
-        case bpawn   -> " ♟ ";
-        case bknight -> " ♞ ";
-        case bbishop -> " ♝ ";
-        case brook   -> " ♜ ";
-        case bqueen  -> " ♛ ";
-        case bking   -> " ♚ ";
+        case bpawn    -> " ♙ ";
+        case bknight  -> " ♘ ";
+        case bbishop  -> " ♗ ";
+        case brook    -> " ♖ ";
+        case bqueen   -> " ♕ ";
+        case bking -> " ♔ ";
+
+        case pawn   -> " ♟ ";
+        case knight -> " ♞ ";
+        case bishop -> " ♝ ";
+        case rook   -> " ♜ ";
+        case queen  -> " ♛ ";
+        case king   -> " ♚ ";
+
         case empty   -> "   ";
         default -> throw new IllegalStateException("Unexpected value: " + pieceType);
     };

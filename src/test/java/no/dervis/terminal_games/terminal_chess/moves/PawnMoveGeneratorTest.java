@@ -307,4 +307,50 @@ class PawnMoveGeneratorTest {
         // Only forward move should be possible, no backward captures
         assertEquals(1, moves.size());
     }
+
+    @Test
+    void testGenerateLegalPawnMoves() {
+        Bitboard board = new Bitboard();
+
+        board.setPiece(rook, white, a7.index());
+        board.setPiece(pawn, black, b7.index());
+        board.setPiece(pawn, black, c7.index());
+        board.setPiece(rook, black, d8.index());
+        board.setPiece(rook, black, e8.index());
+        board.setPiece(pawn, black, f7.index());
+        board.setPiece(pawn, black, g6.index());
+        board.setPiece(king, black, g8.index());
+        board.setPiece(pawn, black, h7.index());
+        board.setPiece(bishop, black, d5.index());
+
+        board.setPiece(pawn, white, c2.index());
+        board.setPiece(bishop, white, d3.index());
+        board.setPiece(rook, white, f2.index());
+        board.setPiece(pawn, white, g2.index());
+        board.setPiece(king, white, h1.index());
+        board.setPiece(pawn, white, h3.index());
+
+        System.out.println(boardToStr.apply(board, true));
+
+        PawnMoveGenerator generator = new PawnMoveGenerator(board);
+        List<Integer> moves = generator.generatePawnMoves(black, 0L);
+
+        moves.forEach(m -> System.out.println(Move.createMove(m, board).toStringShort()))
+        
+        List<String> expectedMoves = List.of(
+                "( ♙ , b7 → b6)",
+                "( ♙ , b7 → b5)",
+                "( ♙ , c7 → c6)",
+                "( ♙ , c7 → c5)",
+                "( ♙ , f7 → f6)",
+                "( ♙ , f7 → f5)",
+                "( ♙ , g6 → g5)",
+                "( ♙ , h7 → h6)",
+                "( ♙ , h7 → h5)"
+        );
+
+        assertEquals(expectedMoves, moves.stream()
+                .map(m -> Move.createMove(m, board).toStringShort())
+                .toList());
+    }
 }

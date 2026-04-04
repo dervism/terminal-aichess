@@ -130,19 +130,6 @@ public class PawnMoveGenerator implements Board {
         return moves;
     }
 
-    private static void generateDoubleMoves(int color, long pawns, long emptySquares, List<Integer> moves) {
-        long doubleMoves = color == 0
-                ? ((pawns & 0xFF00L) << 16) & emptySquares & (emptySquares << 8)
-                : ((pawns & 0xFF000000000000L) >>> 16) & emptySquares & (emptySquares >>> 8);
-
-        while (doubleMoves != 0) {
-            int toSquare = Long.numberOfTrailingZeros(doubleMoves);
-            int fromSquare = color == 0 ? toSquare - 16 : toSquare + 16;
-            moves.add((fromSquare << 14) | (toSquare << 7));
-            doubleMoves &= doubleMoves - 1;
-        }
-    }
-
     private static void generateCaptures(int color, long pawns, long enemyPieces, long ownPieces, List<Integer> moves) {
         // Calculate potential capture squares, excluding own pieces
         long leftCaptures = color == 0

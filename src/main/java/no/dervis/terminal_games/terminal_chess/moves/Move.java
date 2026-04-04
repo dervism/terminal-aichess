@@ -77,8 +77,8 @@ public record Move(
 
     public String toStringShort() {
         return "(" +
-                Chess.pieceToStr.apply(color == 0 ? piece : piece + 6) + "," +
-                Tuple3.of(fromSquare).square().toLowerCase() + "->" +
+                Chess.pieceToStr.apply(color == 0 ? piece : piece + 6) + ", " +
+                Tuple3.of(fromSquare).square().toLowerCase() + " → " +
                 Tuple3.of(toSquare).square().toLowerCase() + ")";
     }
 

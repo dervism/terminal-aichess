@@ -135,13 +135,15 @@ public class TerminalChess implements BoardPrinter {
         System.out.println("  2. Medium     (3 seconds)");
         System.out.println("  3. Hard       (5 seconds)");
         System.out.println("  4. Expert     (10 seconds)");
-        System.out.print("Choice (1-4): ");
+        System.out.println("  5. Grandmaster     (35 seconds)");
+        System.out.print("Choice (1-5): ");
         String choice = scanner.nextLine().trim();
         return switch (choice) {
             case "1" -> 1000;
             case "2" -> 3000;
             case "3" -> 5000;
             case "4" -> 10000;
+            case "5" -> 35000;
             default -> {
                 System.out.println("Invalid choice, defaulting to Medium.");
                 yield 3000;
