@@ -267,4 +267,64 @@ class GeneratorTest implements Chess {
 
         assertEquals(2, moves.size(), "There should be two moves to get the king out of check: Kd7 and Nxf7.");
     }
+
+    @Test
+    void testCannotCastleWhileInCheck() {
+        // White king at e1, white rooks at a1 and h1 (castling rights intact)
+        board.setPiece(king, white, e1.index());
+        board.setPiece(rook, white, a1.index());
+        board.setPiece(rook, white, h1.index());
+        // Black rook at e8 giving check along the e-file
+        board.setPiece(rook, black, e8.index());
+        // Black king far away
+        board.setPiece(king, black, a8.index());
+
+        System.out.println(boardToStr.apply(board, true));
+
+        assertTrue(Generator.isKingInCheck(board, white, e1.index()),
+                "White king should be in check from rook on e8.");
+
+        List<Integer> legalMoves = generator.generateMoves(white);
+
+        // No legal move should be a castling move
+        for (int move : legalMoves) {
+            int moveType = (move >>> 4) & 0x7;
+            assertNotEquals(MoveType.CASTLE_KING_SIDE.ordinal(), moveType,
+                    "King-side castling should not be allowed while in check.");
+            assertNotEquals(MoveType.CASTLE_QUEEN_SIDE.ordinal(), moveType,
+                    "Queen-side castling should not be allowed while in check.");
+        }
+    }
+
+    @Test
+    void testCannotCastleBlackWhileInCheck() {
+        // Black king at e8, black rooks at a8 and h8 (castling rights intact)
+        board.setPiece(king, black, e8.index());
+        board.setPiece(rook, black, a8.index());
+        board.setPiece(rook, black, h8.index());
+        // White rook at e1 giving check along the e-file
+        board.setPiece(rook, white, e1.index());
+        // White king far away
+        board.setPiece(king, white, a1.index());
+
+        // It's black's turn
+        board.setPiece(pawn, white, h2.index());
+        board.makeMove(Move.createMove(h2.index(), h3.index(), MoveType.NORMAL.ordinal()));
+
+        System.out.println(boardToStr.apply(board, false));
+
+        assertTrue(Generator.isKingInCheck(board, black, e8.index()),
+                "Black king should be in check from rook on e1.");
+
+        Generator gen = new Generator(board);
+        List<Integer> legalMoves = gen.generateMoves(black);
+
+        for (int move : legalMoves) {
+            int moveType = (move >>> 4) & 0x7;
+            assertNotEquals(MoveType.CASTLE_KING_SIDE.ordinal(), moveType,
+                    "King-side castling should not be allowed while in check.");
+            assertNotEquals(MoveType.CASTLE_QUEEN_SIDE.ordinal(), moveType,
+                    "Queen-side castling should not be allowed while in check.");
+        }
+    }
 }

@@ -1,5 +1,6 @@
 package no.dervis.terminal_games.terminal_chess;
 
+import no.dervis.terminal_games.terminal_chess.ai.ChessAI;
 import no.dervis.terminal_games.terminal_chess.board.Bitboard;
 import no.dervis.terminal_games.terminal_chess.board.Board.Tuple2;
 import no.dervis.terminal_games.terminal_chess.board.Board.Tuple3;
@@ -8,9 +9,7 @@ import no.dervis.terminal_games.terminal_chess.board.Chess;
 import no.dervis.terminal_games.terminal_chess.moves.Generator;
 import no.dervis.terminal_games.terminal_chess.moves.Move;
 
-import java.util.List;
 import java.util.Optional;
-import java.util.Random;
 import java.util.Scanner;
 import java.util.function.Function;
 
@@ -31,13 +30,16 @@ public class TerminalChess implements BoardPrinter {
         Bitboard board = new Bitboard();
         board.initialiseBoard();
         Generator generator = new Generator(board);
+        ChessAI ai = new ChessAI();
 
         System.out.println(Chess.boardToStr.apply(board, true));
         boolean status = true;
 
-        System.out.print("Play white or black? (w/b)");
+        System.out.print("Play white or black? (w/b) ");
         boolean userColor = scanner.nextLine().equalsIgnoreCase("w");
         int userTurn = userColor ? white : black;
+
+        long thinkTimeMs = chooseDifficulty();
 
         String userInput = "";
 
@@ -52,7 +54,7 @@ public class TerminalChess implements BoardPrinter {
                     break;
                 }
 
-                List<Integer> userMoves = generator.generateMoves(board.turn());
+                var userMoves = generator.generateMoves(board.turn());
                 var parsedInput = parseMove(userInput);
                 parsedInput.flatMap(
                         parsedMove -> userMoves
@@ -64,8 +66,7 @@ public class TerminalChess implements BoardPrinter {
                         .ifPresentOrElse(legalUserMove -> board.makeMove(legalUserMove.left()),
                                 () -> System.out.println("Please enter a legal move."));
             } else {
-                List<Integer> computerMoves = generator.generateMoves(board.turn());
-                getMoveFromComputer(computerMoves, board);
+                getMoveFromComputer(ai, board, thinkTimeMs);
             }
 
             clearTerminal();
@@ -96,8 +97,13 @@ public class TerminalChess implements BoardPrinter {
         }
     }
 
-    private static void getMoveFromComputer(List<Integer> moves, Bitboard board) {
-        int move = moves.get(new Random().nextInt(0, moves.size()));
+    private static void getMoveFromComputer(ChessAI ai, Bitboard board, long thinkTimeMs) {
+        System.out.println("Thinking...");
+        int move = ai.findBestMove(board, thinkTimeMs);
+        if (move == 0) {
+            System.out.println("No legal moves available.");
+            return;
+        }
         Move computerMove = Move.createMove(move, board);
         System.out.println("Computer move: " + computerMove.toStringShort());
         board.makeMove(move);
@@ -121,6 +127,26 @@ public class TerminalChess implements BoardPrinter {
     private static String getMoveFromUser() {
         System.out.print("Enter your move: ");
         return scanner.nextLine();
+    }
+
+    private static long chooseDifficulty() {
+        System.out.println("Select difficulty:");
+        System.out.println("  1. Easy       (1 second)");
+        System.out.println("  2. Medium     (3 seconds)");
+        System.out.println("  3. Hard       (5 seconds)");
+        System.out.println("  4. Expert     (10 seconds)");
+        System.out.print("Choice (1-4): ");
+        String choice = scanner.nextLine().trim();
+        return switch (choice) {
+            case "1" -> 1000;
+            case "2" -> 3000;
+            case "3" -> 5000;
+            case "4" -> 10000;
+            default -> {
+                System.out.println("Invalid choice, defaulting to Medium.");
+                yield 3000;
+            }
+        };
     }
 
     private static void clearTerminal() {

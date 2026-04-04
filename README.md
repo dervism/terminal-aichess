@@ -23,13 +23,14 @@ In your terminal, this is how the app will look like.
 - [x] Implement terminal ui
 - [x] Implement basic move generation
 - [x] Implement complete move generation (checks, attacks, castling, en-passant, promotions)
-- [ ] Implement legal moves filtering
+- [x] Implement legal moves filtering
 - [ ] Implement perft move generation analysis
-- [ ] Implement basic ai (𝛼/ϐ search)
-- [ ] Implement advanced ai (monte-carlo simulation & neural networks)
+- [x] Implement basic AI (𝛼/ϐ search)
+- [x] Implement advanced AI (𝛼/ϐ search + iterative deepening + quiescence search + Negamax + Principal Variation Search (PVS) + transposition table + check extensions + Late Move Reductions (LMR) + Killer & History heuristics + time management)
+- [ ] Implement superior ai (monte-carlo simulation and neural networks)
 
 ## Terminal Tic Tac Toe
-A complete Java 23 tic-tac-toe game that can scale to custom set bigger boards.
+A complete Java 25 tic-tac-toe game that can scale to custom set bigger boards.
 
 **TODOs:**
 - [x] Implement list-based board

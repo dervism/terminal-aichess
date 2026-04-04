@@ -2,7 +2,10 @@ package no.dervis.terminal_games.terminal_chess.moves;
 
 import no.dervis.terminal_games.terminal_chess.board.Bitboard;
 import no.dervis.terminal_games.terminal_chess.board.Chess;
-import no.dervis.terminal_games.terminal_chess.moves.attacks.*;
+import no.dervis.terminal_games.terminal_chess.moves.attacks.KingAttacks;
+import no.dervis.terminal_games.terminal_chess.moves.attacks.KnightAttacks;
+import no.dervis.terminal_games.terminal_chess.moves.attacks.MagicBitboard;
+import no.dervis.terminal_games.terminal_chess.moves.attacks.PawnAttacks;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -103,84 +106,35 @@ public class Generator implements Chess {
         return movesAttacks;
     }
 
+    /**
+     * Checks if the king of the given color is in check on the given board.
+     *
+     * <p>For sliding pieces (rook, bishop, queen), uses magic bitboard lookups
+     * which naturally account for blocking pieces — no manual between-mask
+     * calculation needed. The magic lookup from the king's square with the
+     * current occupancy gives exactly the squares the king "sees" along each
+     * ray. If any opponent sliding piece sits on one of those squares, it
+     * attacks the king.</p>
+     */
     public static boolean isKingInCheck(Bitboard board, int color, int kingSquare) {
-        // Get attack masks for all piece types
-        long rookAttacksMask = RookAttacks.getAllRookAttacks(kingSquare);
-        long bishopAttacksMask = BishopAttacks.getAllBishopAttacks(kingSquare);
-        long knightAttacksMask = KnightAttacks.getAllKnightAttacks(kingSquare);
-        long pawnAttacksMask = PawnAttacks.getAllPawnAttacks(kingSquare, color);
-        long kingAttacksMask = KingAttacks.getAllKingAttacks(kingSquare);
-
-        // Get opponent pieces
-        long opponentRooks = board.getRooks(1 - color);
-        long opponentBishops = board.getBishops(1 - color);
-        long opponentQueens = board.getQueens(1 - color);
-        long opponentKnights = board.getKnights(1 - color);
-        long opponentPawns = board.getPawns(1 - color);
-        long opponentKing = board.kingPiece(1 - color);
-
-        // Get all pieces on the board
+        int opponent = 1 - color;
         long allPieces = board.allPieces();
 
-        // Check for attacks from non-sliding pieces (knight, pawn, king)
-        if ((knightAttacksMask & opponentKnights) != 0) return true;
-        if ((pawnAttacksMask & opponentPawns) != 0) return true;
-        if ((kingAttacksMask & opponentKing) != 0) return true;
+        // Non-sliding pieces: precomputed lookup, no blocker consideration needed
+        if ((KnightAttacks.getAllKnightAttacks(kingSquare) & board.getKnights(opponent)) != 0) return true;
+        if ((PawnAttacks.getAllPawnAttacks(kingSquare, color) & board.getPawns(opponent)) != 0) return true;
+        if ((KingAttacks.getAllKingAttacks(kingSquare) & board.kingPiece(opponent)) != 0) return true;
 
-        // Check for rook attacks (including queen's rook-like moves)
-        long rookAttackers = rookAttacksMask & (opponentRooks | opponentQueens);
-        while (rookAttackers != 0) {
-            int attackerSquare = Long.numberOfTrailingZeros(rookAttackers);
-            long between = getBetweenMask(kingSquare, attackerSquare);
-            if ((between & allPieces) == 0) return true;
-            rookAttackers &= (rookAttackers - 1); // Clear the least significant bit
-        }
+        // Sliding pieces: magic bitboard lookup handles blockers automatically.
+        // "What squares does a rook/bishop on the king's square see?" — if an
+        // opponent rook/bishop/queen is on one of those squares, it's giving check.
+        long opponentRooksQueens = board.getRooks(opponent) | board.getQueens(opponent);
+        if ((MagicBitboard.rookAttacks(kingSquare, allPieces) & opponentRooksQueens) != 0) return true;
 
-        // Check for bishop attacks (including queen's bishop-like moves)
-        long bishopAttackers = bishopAttacksMask & (opponentBishops | opponentQueens);
-        while (bishopAttackers != 0) {
-            int attackerSquare = Long.numberOfTrailingZeros(bishopAttackers);
-            long between = getBetweenMask(kingSquare, attackerSquare);
-            if ((between & allPieces) == 0) return true;
-            bishopAttackers &= (bishopAttackers - 1); // Clear the least significant bit
-        }
+        long opponentBishopsQueens = board.getBishops(opponent) | board.getQueens(opponent);
+        if ((MagicBitboard.bishopAttacks(kingSquare, allPieces) & opponentBishopsQueens) != 0) return true;
 
         return false;
-    }
-
-    private static long getBetweenMask(int square1, int square2) {
-        int rank1 = square1 / 8, file1 = square1 % 8;
-        int rank2 = square2 / 8, file2 = square2 % 8;
-        long mask = 0L;
-
-        if (rank1 == rank2) {
-            // Horizontal
-            int minFile = Math.min(file1, file2);
-            int maxFile = Math.max(file1, file2);
-            for (int f = minFile + 1; f < maxFile; f++) {
-                mask |= 1L << (rank1 * 8 + f);
-            }
-        } else if (file1 == file2) {
-            // Vertical
-            int minRank = Math.min(rank1, rank2);
-            int maxRank = Math.max(rank1, rank2);
-            for (int r = minRank + 1; r < maxRank; r++) {
-                mask |= 1L << (r * 8 + file1);
-            }
-        } else if (Math.abs(rank1 - rank2) == Math.abs(file1 - file2)) {
-            // Diagonal
-            int rankStep = (rank2 > rank1) ? 1 : -1;
-            int fileStep = (file2 > file1) ? 1 : -1;
-            int r = rank1 + rankStep;
-            int f = file1 + fileStep;
-            while (r != rank2 && f != file2) {
-                mask |= 1L << (r * 8 + f);
-                r += rankStep;
-                f += fileStep;
-            }
-        }
-
-        return mask;
     }
 
 

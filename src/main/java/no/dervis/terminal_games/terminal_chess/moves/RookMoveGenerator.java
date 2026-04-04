@@ -2,10 +2,10 @@ package no.dervis.terminal_games.terminal_chess.moves;
 
 import no.dervis.terminal_games.terminal_chess.board.Bitboard;
 import no.dervis.terminal_games.terminal_chess.board.Board;
+import no.dervis.terminal_games.terminal_chess.moves.attacks.MagicBitboard;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Predicate;
 
 import static no.dervis.terminal_games.terminal_chess.board.Chess.rook;
 
@@ -13,13 +13,6 @@ public class RookMoveGenerator implements Board {
 
     private final long[] whitePieces;
     private final long[] blackPieces;
-
-    private static final int NORTH_OFFSET = 8;
-    private static final int SOUTH_OFFSET = -8;
-    private static final int EAST_OFFSET = 1;
-    private static final int WEST_OFFSET = -1;
-    private static final int BOARD_SIZE = 64;
-    private static final int ROW_SIZE = 8;
 
     public RookMoveGenerator(Bitboard board) {
         this.whitePieces = board.whitePieces();
@@ -55,22 +48,7 @@ public class RookMoveGenerator implements Board {
     }
 
     public static long rookAttacks(int square, long allPieces) {
-        return calculateAttacksInDirection(square, allPieces, NORTH_OFFSET, i -> true)
-                | calculateAttacksInDirection(square, allPieces, SOUTH_OFFSET, i -> true)
-                | calculateAttacksInDirection(square, allPieces, EAST_OFFSET, i -> i % ROW_SIZE != 0)
-                | calculateAttacksInDirection(square, allPieces, WEST_OFFSET, i -> i % ROW_SIZE != 7);
-    }
-
-
-    private static long calculateAttacksInDirection(int square, long allPieces, int directionOffset, Predicate<Integer> isEdge) {
-        long attacks = 0;
-        for (int i = square + directionOffset; i < BOARD_SIZE && i >= 0 && isEdge.test(i); i += directionOffset) {
-            attacks |= 1L << i;
-            if ((allPieces & (1L << i)) != 0) {
-                break;
-            }
-        }
-        return attacks;
+        return MagicBitboard.rookAttacks(square, allPieces);
     }
 
 }

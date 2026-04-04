@@ -9,11 +9,13 @@ import java.util.List;
 
 public class KingMoveGenerator implements Board, Chess {
 
+    private final Bitboard board;
     private final long[] whitePieces;
     private final long[] blackPieces;
     private final int castlingRights;
 
     public KingMoveGenerator(Bitboard board) {
+        this.board = board;
         this.whitePieces = board.whitePieces();
         this.blackPieces = board.blackPieces();
         this.castlingRights = board.castlingRights();
@@ -45,6 +47,11 @@ public class KingMoveGenerator implements Board, Chess {
                     moves.add((fromSquare << 14) | (toSquare << 7));
                 }
             }
+        }
+
+        // Castling is not allowed when the king is in check
+        if (Generator.isKingInCheck(board, color, fromSquare)) {
+            return moves;
         }
 
         // Castling moves
