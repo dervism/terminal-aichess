@@ -25,12 +25,6 @@ public class PawnAttacks {
         int rank = square / 8;
         int file = square % 8;
 
-        // Return no attacks for pawns on first or last rank
-        if ((color == Chess.white && (rank == 0 || rank == 7)) || 
-            (color == Chess.black && (rank == 0 || rank == 7))) {
-            return 0L;
-        }
-
         // White pawns attack upward (rank + 1), Black pawns attack downward (rank - 1)
         int attackRank = (color == Chess.white) ? rank + 1 : rank - 1;
 

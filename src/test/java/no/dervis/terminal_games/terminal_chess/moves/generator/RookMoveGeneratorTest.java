@@ -3,8 +3,8 @@ package no.dervis.terminal_games.terminal_chess.moves.generator;
 import no.dervis.terminal_games.terminal_chess.board.Bitboard;
 import no.dervis.terminal_games.terminal_chess.board.Board;
 import no.dervis.terminal_games.terminal_chess.board.Chess;
+import no.dervis.terminal_games.terminal_chess.board.MagicBitboard;
 import no.dervis.terminal_games.terminal_chess.moves.Move;
-import no.dervis.terminal_games.terminal_chess.moves.attacks.CheckHelper;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -123,9 +123,10 @@ class RookMoveGeneratorTest implements Board, Chess {
         System.out.println(boardToStr.apply(board, true));
         assertEquals(8, generator.generateRookMoves(white).size());
 
-        CheckHelper helper = new CheckHelper(board);
-        assertTrue(helper.isSquareAttackedByRook(e7.index(), white));
-        assertFalse(helper.isSquareAttackedByRook(b4.index(), white));
+        long allPieces = board.allPieces();
+        long whiteRooks = board.getRooks(white);
+        assertTrue((MagicBitboard.rookAttacks(e7.index(), allPieces) & whiteRooks) != 0);
+        assertFalse((MagicBitboard.rookAttacks(b4.index(), allPieces) & whiteRooks) != 0);
     }
 
 }

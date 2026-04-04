@@ -139,8 +139,9 @@ class GeneratorTest implements Chess {
         board.setPiece(king, white, 4);
         // Black bishop at h4 (square 31)
         board.setPiece(bishop, black, 31);
-        // Black pawn at f2 (square 13) - blocking the bishop
-        board.setPiece(pawn, black, 13);
+        // Black knight at f2 (square 13) - blocking the bishop
+        // (Using knight instead of pawn: a black pawn at f2 would itself give check to e1)
+        board.setPiece(knight, black, 13);
 
         System.out.println(boardToStr.apply(board, true));
 

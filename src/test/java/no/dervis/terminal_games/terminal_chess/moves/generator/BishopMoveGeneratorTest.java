@@ -1,7 +1,7 @@
 package no.dervis.terminal_games.terminal_chess.moves.generator;
 
 import no.dervis.terminal_games.terminal_chess.board.Bitboard;
-import no.dervis.terminal_games.terminal_chess.moves.attacks.CheckHelper;
+import no.dervis.terminal_games.terminal_chess.board.MagicBitboard;
 import org.junit.jupiter.api.Test;
 
 import static no.dervis.terminal_games.terminal_chess.board.Board.*;
@@ -46,9 +46,9 @@ class BishopMoveGeneratorTest {
         System.out.println(boardToStr.apply(board, true));
 
         BishopMoveGenerator generator = new BishopMoveGenerator(board);
-        CheckHelper helper = new CheckHelper(board);
 
         assertEquals(5, generator.generateBishopMoves(white).size());
-        assertTrue(helper.isSquareAttackedByBishop(f4.index(), white));
+        long whiteBishops = board.getBishops(white);
+        assertTrue((MagicBitboard.bishopAttacks(f4.index(), board.allPieces()) & whiteBishops) != 0);
     }
 }

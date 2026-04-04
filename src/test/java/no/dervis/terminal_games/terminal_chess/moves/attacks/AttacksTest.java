@@ -41,9 +41,14 @@ public class AttacksTest {
         // A black pawn in the center should attack 2 squares
         assertEquals(2, Long.bitCount(blackPawnAttacks));
 
-        // Test edge cases: pawns on first/last rank should have no attacks
-        assertEquals(0, Long.bitCount(PawnAttacks.getAllPawnAttacks(Bitboard.a1.index(), Chess.white)));
-        assertEquals(0, Long.bitCount(PawnAttacks.getAllPawnAttacks(Bitboard.h8.index(), Chess.black)));
+        // Edge cases: white pawn on rank 1 attacks one square (b2), black pawn on rank 8 attacks one square (g7).
+        // These aren't real pawn positions (pawns promote on rank 1/8), but the table must produce correct
+        // diagonal attacks for all squares since it's also used for reverse lookups in check detection.
+        assertEquals(1, Long.bitCount(PawnAttacks.getAllPawnAttacks(Bitboard.a1.index(), Chess.white)));
+        assertEquals(1, Long.bitCount(PawnAttacks.getAllPawnAttacks(Bitboard.h8.index(), Chess.black)));
+        // Truly impossible directions still return 0: white pawn on rank 8 has no square above, black pawn on rank 1 has no square below
+        assertEquals(0, Long.bitCount(PawnAttacks.getAllPawnAttacks(Bitboard.a8.index(), Chess.white)));
+        assertEquals(0, Long.bitCount(PawnAttacks.getAllPawnAttacks(Bitboard.a1.index(), Chess.black)));
     }
 
     @Test

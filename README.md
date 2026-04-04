@@ -7,7 +7,7 @@ A simple version of the well-known minimax-based 𝛼/ϐ algorithm can generate 
 ## Terminal Chess
 Simple Java 25 chess app that uses bitboards. The implementation is mainly for learning the Bitboard data-structure, one of the most effective and compact data formats for chess. The implementation features a sudo-move generator split into multiple individual generators. All generated moves are stored in a compact 32-bit data storage format based on my own work with earlier chess engines.
 
-This engine also uses Magic Bitboards, which allow the engine to rapidly generate attacks and sliding piece moves without loops. As it is severely hard to correctly implement bit-shifting and bit-masking correctly on Magic Bitboards, the inspiration for the magic numbers implementation is based on examples shared at the [Chess Programming Wiki](https://www.chessprogramming.org/Magic_Bitboards) website.
+This engine also uses Magic Bitboards, which allow the engine to rapidly generate attacks and sliding piece moves without loops. As it is severely hard to correctly implement bit-shifting and bit-masking correctly on Magic Bitboards, the inspiration for the magic numbers implementation is based on examples shared at the [Chess Programming Wiki](https://www.chessprogramming.org/Magic_Bitboards) website. Before Magic Bitboards, I used Java streams and loops to calculate attacks and sliding moves. This technique works but is extremely slow, and you can read about the [ideas behind it in the README file](src/main/java/no/dervis/terminal_games/terminal_chess/moves/attacks/history/README.md).
 
 PS: The game works, and the AI plays strong games without an opening book. This is still a work in progress.
 
