@@ -1,20 +1,20 @@
 # Terminal Games
 
-The project contains three board games that is playable directly from the terminal.
-The goal of the project is to learn different board representations and move generation algorithms.
-In most cases, the most effective algorithm is the 𝛼/ϐ cutoff search.
+The project contains three board games that are playable directly from the terminal. I created this repo because my previous trials to implement Java-based chess engines with x88 and traditional for-loops resulted in very slow engines that played poor chess. The goal of this project is, therefore, to learn advanced board representations and move generation algorithms with efficient bit-shifting techniques.
+
+A simple version of the well-known minimax-based 𝛼/ϐ algorithm can generate strong moves for simple games with limited search space and simple heuristics. Chess, however, has an infinitely large search space that can quickly exhaust the memory and the cpu. To tackle that problem in chess, the 𝛼/ϐ cutoff search must be extended with optimizations, memory-efficient data-formats and a strong heuristic analysis and evaluation.
 
 ## Terminal Chess
-Simple Java 23 chess app that uses bitboards.
-This implementation is mainly for learning the bitboard data-structure, one of the most effective and compact chess data formats.
-It's hard to implement the bit-shifting and bit-masking correctly.
+Simple Java 25 chess app that uses bitboards. The implementation is mainly for learning the Bitboard data-structure, one of the most effective and compact data formats for chess. The implementation features a sudo-move generator split into multiple individual generators. All generated moves are stored in a compact 32-bit data storage format based on my own work with earlier chess engines.
 
-PS: This is still work in progress. The game works, but will only respond with random moves at the moment.
+This engine also uses Magic Bitboards, which allow the engine to rapidly generate attacks and sliding piece moves without loops. As it is severely hard to correctly implement bit-shifting and bit-masking correctly on Magic Bitboards, the inspiration for the magic numbers implementation is based on examples shared at the [Chess Programming Wiki](https://www.chessprogramming.org/Magic_Bitboards) website.
+
+PS: The game works, and the AI plays strong games without an opening book. This is still a work in progress.
 
 Running in your terminal:
-` java --enable-preview --source 23  src/main/java/no/dervis/terminal_games/terminal_chess/TerminalChess.java`
+`java --enable-preview --source 25  src/main/java/no/dervis/terminal_games/terminal_chess/TerminalChess.java`
 
-In your terminal, this is how the app will look like.
+In your terminal, this is what the app will look like.
 
 <img height="256" src="board.png" width="250"/>
 
@@ -27,10 +27,11 @@ In your terminal, this is how the app will look like.
 - [ ] Implement perft move generation analysis
 - [x] Implement basic AI (𝛼/ϐ search)
 - [x] Implement advanced AI (𝛼/ϐ search + iterative deepening + quiescence search + Negamax + Principal Variation Search (PVS) + transposition table + check extensions + Late Move Reductions (LMR) + Killer & History heuristics + time management)
+- [ ] Implement opening book
 - [ ] Implement superior ai (monte-carlo simulation and neural networks)
 
-## Terminal Tic Tac Toe
-A complete Java 25 tic-tac-toe game that can scale to custom set bigger boards.
+## Terminal Tic-tac-toe
+A complete Java 25 Tic-tac-toe game that can scale to custom sized nxn boards.
 
 **TODOs:**
 - [x] Implement list-based board
@@ -40,9 +41,9 @@ A complete Java 25 tic-tac-toe game that can scale to custom set bigger boards.
 - [x] Implement basic ai (minimax with 𝛼/ϐ cutoff)
 
 ## Terminal Checkers
-A Java 23 checkers game that uses a map based board. It supports regular moves, jump moves and kings.
+A Java 25 checkers game that uses a map-based board. It supports regular moves, jump moves and kings.
 
-PS: This is still work in progress. The game works, but will only respond with random moves at the moment.
+PS: This is still a work in progress. The game works but will only respond with random moves at the moment.
 
 **TODOs:**
 - [x] Implement map-based board
