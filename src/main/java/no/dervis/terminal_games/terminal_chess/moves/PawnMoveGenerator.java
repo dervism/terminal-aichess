@@ -48,51 +48,8 @@ public class PawnMoveGenerator implements Board {
                     long toSquareMask = 1L << toSquare;
                     // Check if destination is empty
                     if ((toSquareMask & allPieces) == 0) {
-                        // Check if this pawn could capture other friendly pawns
-                        int file = fromSquare % 8;
-                        boolean couldCapture = false;
-
-                        // Only check for potential captures if this is a forward move from rank 5/4 for white/black
-                        if ((color == 0 && fromRank == 4) || (color == 1 && fromRank == 3)) {
-                            // For white pawns on rank 5, check if there are white pawns on rank 4 that could be captured
-                            if (color == 0) {
-                                // Check diagonal squares one rank behind
-                                if (file > 0) {
-                                    int leftSquare = fromSquare - 9; // One rank back, one file left
-                                    if (leftSquare >= 0 && ((1L << leftSquare) & ownPieces) != 0) {
-                                        couldCapture = true;
-                                    }
-                                }
-                                if (file < 7) {
-                                    int rightSquare = fromSquare - 7; // One rank back, one file right
-                                    if (rightSquare >= 0 && ((1L << rightSquare) & ownPieces) != 0) {
-                                        couldCapture = true;
-                                    }
-                                }
-                            } else {
-                                // For black pawns on rank 4, check if there are black pawns on rank 5 that could be captured
-                                if (file > 0) {
-                                    int leftSquare = fromSquare + 7; // One rank forward, one file left
-                                    if (leftSquare < 64 && ((1L << leftSquare) & ownPieces) != 0) {
-                                        couldCapture = true;
-                                    }
-                                }
-                                if (file < 7) {
-                                    int rightSquare = fromSquare + 9; // One rank forward, one file right
-                                    if (rightSquare < 64 && ((1L << rightSquare) & ownPieces) != 0) {
-                                        couldCapture = true;
-                                    }
-                                }
-                            }
-                        }
-
-                        // Generate move if either:
-                        // 1. The pawn is not on rank 5/4 (for white/black), or
-                        // 2. The pawn is on rank 5/4 but couldn't capture other pawns
-                        if (!couldCapture) {
-                            singleMoves |= toSquareMask;
-                            isPromotionMove(color, moves, toSquareMask, toSquare, fromSquare);
-                        }
+                        singleMoves |= toSquareMask;
+                        isPromotionMove(color, moves, toSquareMask, toSquare, fromSquare);
                     }
                 }
             }
@@ -101,7 +58,7 @@ public class PawnMoveGenerator implements Board {
 
         // Generate double moves from starting position
         // White pawns start on rank 2 (0xFF00), black pawns on rank 7 (0xFF00000000000000)
-        long startRank = color == 0 ? 0xFF00L : 0xFF00000000000000L;
+        long startRank = color == 0 ? 0xFF00L : 0x00FF000000000000L;
 
         long startPawns = pawns & startRank;
         while (startPawns != 0) {
@@ -133,11 +90,11 @@ public class PawnMoveGenerator implements Board {
     private static void generateCaptures(int color, long pawns, long enemyPieces, long ownPieces, List<Integer> moves) {
         // Calculate potential capture squares, excluding own pieces
         long leftCaptures = color == 0
-            ? (pawns << 7) & ~FILE_A & enemyPieces & ~ownPieces  // White captures up-left
-            : (pawns >>> 9) & ~FILE_A & enemyPieces & ~ownPieces; // Black captures down-left
+            ? (pawns << 7) & ~FILE_H & enemyPieces & ~ownPieces  // White captures up-left
+            : (pawns >>> 9) & ~FILE_H & enemyPieces & ~ownPieces; // Black captures down-left
         long rightCaptures = color == 0
-            ? (pawns << 9) & ~FILE_H & enemyPieces & ~ownPieces  // White captures up-right
-            : (pawns >>> 7) & ~FILE_H & enemyPieces & ~ownPieces; // Black captures down-right
+            ? (pawns << 9) & ~FILE_A & enemyPieces & ~ownPieces  // White captures up-right
+            : (pawns >>> 7) & ~FILE_A & enemyPieces & ~ownPieces; // Black captures down-right
 
         // Process left captures
         while (leftCaptures != 0) {

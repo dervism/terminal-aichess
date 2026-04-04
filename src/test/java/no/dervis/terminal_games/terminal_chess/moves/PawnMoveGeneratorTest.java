@@ -179,8 +179,8 @@ class PawnMoveGeneratorTest {
             System.out.println("[DEBUG_LOG] From: " + fromSquare + " To: " + toSquare);
         }
 
-        // Only the forward move should be legal
-        assertEquals(1, moves.size());
+        // All three pawns can move forward, but no captures of own pieces
+        assertEquals(3, moves.size());
     }
 
     @Test
@@ -335,17 +335,17 @@ class PawnMoveGeneratorTest {
         PawnMoveGenerator generator = new PawnMoveGenerator(board);
         List<Integer> moves = generator.generatePawnMoves(black, 0L);
 
-        moves.forEach(m -> System.out.println(Move.createMove(m, board).toStringShort()))
-        
+        moves.forEach(m -> System.out.println(Move.createMove(m, board).toStringShort()));
+
         List<String> expectedMoves = List.of(
-                "( ♙ , b7 → b6)",
-                "( ♙ , b7 → b5)",
-                "( ♙ , c7 → c6)",
-                "( ♙ , c7 → c5)",
-                "( ♙ , f7 → f6)",
-                "( ♙ , f7 → f5)",
                 "( ♙ , g6 → g5)",
+                "( ♙ , b7 → b6)",
+                "( ♙ , c7 → c6)",
+                "( ♙ , f7 → f6)",
                 "( ♙ , h7 → h6)",
+                "( ♙ , b7 → b5)",
+                "( ♙ , c7 → c5)",
+                "( ♙ , f7 → f5)",
                 "( ♙ , h7 → h5)"
         );
 
