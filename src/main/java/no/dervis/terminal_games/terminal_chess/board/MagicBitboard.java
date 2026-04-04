@@ -1,5 +1,7 @@
 package no.dervis.terminal_games.terminal_chess.board;
 
+import static java.util.Arrays.fill;
+
 /**
  * Magic Bitboard implementation for efficient sliding piece attack generation.
  *
@@ -164,7 +166,7 @@ public class MagicBitboard {
             if (Long.bitCount((mask * magic) & 0xFF00000000000000L) < 6) continue;
 
             // Reset candidate table
-            java.util.Arrays.fill(candidate, 0L);
+            fill(candidate, 0L);
             boolean[] used = new boolean[tableSize];
 
             for (int i = 0; i < subsetCount; i++) {

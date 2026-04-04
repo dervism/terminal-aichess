@@ -3,48 +3,6 @@ package no.dervis.terminal_games.terminal_checkers;
 import java.util.*;
 
 public class Checkers {
-    public enum Color {
-        WHITE, WHITE_KING, BLACK, BLACK_KING, EMPTY;
-
-        public boolean isKing() {
-            return this == WHITE_KING || this == BLACK_KING;
-        }
-
-        public Color opposite() {
-            return switch (this) {
-                case WHITE, WHITE_KING -> BLACK;
-                case BLACK, BLACK_KING -> WHITE;
-                default -> EMPTY;
-            };
-        }
-
-        @Override
-        public String toString() {
-            return switch (this) {
-                case WHITE -> "⛀";
-                case WHITE_KING -> "⛁";
-                case BLACK -> "⛂";
-                case BLACK_KING -> "⛃";
-                case EMPTY -> " ";
-            };
-        }
-    }
-
-    public record Position(int row, int col) {
-        public Cell toCell() {
-            return Cell.fromCellNumber((row() * 8) + col() + 1);
-        }
-    }
-    public record Cell(Integer cellNr, Position position) {
-            static Cell fromCellNumber(int cellNr) {
-            int row = (cellNr - 1) / 8;
-            int col = (cellNr - 1) % 8;
-            return new Cell(cellNr, new Position(row, col));
-        }
-    }
-    public record Player(String name, Color color) {}
-    public record Board(Map<Cell, Color> cells) {}
-    public record Move(Player player, Cell from, Cell to) {}
 
     private Board board;
 
