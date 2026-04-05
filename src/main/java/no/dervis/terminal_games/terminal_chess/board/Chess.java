@@ -24,7 +24,8 @@ public interface Chess {
         EN_PASSANT,
         CASTLE_KING_SIDE,
         CASTLE_QUEEN_SIDE,
-        ATTACK
+        ATTACK,
+        PROMOTION;
     }
 
     Function<Integer, String> pieceToStr = pieceType -> switch (pieceType) {

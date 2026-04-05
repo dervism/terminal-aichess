@@ -526,9 +526,8 @@ public class ChessAI implements Chess {
 
             int move = ttMove[ttIdx];
             Move decoded = Move.createMove(move, copy);
-            boolean capture = isCapture(move, copy);
             if (sb.length() > 0) sb.append(' ');
-            sb.append(decoded.toAlgebraic(capture));
+            sb.append(decoded.toAlgebraic());
 
             copy.makeMove(move);
         }

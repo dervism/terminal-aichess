@@ -2,6 +2,7 @@ package no.dervis.terminal_games.terminal_chess.moves.generator;
 
 import no.dervis.terminal_games.terminal_chess.board.Bitboard;
 import no.dervis.terminal_games.terminal_chess.board.Board;
+import no.dervis.terminal_games.terminal_chess.board.Chess.MoveType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,7 +39,8 @@ public class QueenMoveGenerator implements Board {
 
             while (queenMoves != 0) {
                 int toSquare = Long.numberOfTrailingZeros(queenMoves);
-                moves.add((fromSquare << 14) | (toSquare << 7));
+                int type = ((1L << toSquare) & enemyPieces) != 0 ? MoveType.ATTACK.ordinal() : 0;
+                moves.add((fromSquare << 14) | (toSquare << 7) | (type << 4));
                 queenMoves &= queenMoves - 1;
             }
 

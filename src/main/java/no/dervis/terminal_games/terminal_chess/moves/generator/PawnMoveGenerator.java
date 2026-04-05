@@ -2,6 +2,7 @@ package no.dervis.terminal_games.terminal_chess.moves.generator;
 
 import no.dervis.terminal_games.terminal_chess.board.Bitboard;
 import no.dervis.terminal_games.terminal_chess.board.Board;
+import no.dervis.terminal_games.terminal_chess.board.Chess.MoveType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -49,7 +50,7 @@ public class PawnMoveGenerator implements Board {
                     // Check if destination is empty
                     if ((toSquareMask & allPieces) == 0) {
                         singleMoves |= toSquareMask;
-                        isPromotionMove(color, moves, toSquareMask, toSquare, fromSquare);
+                        addPawnMove(color, moves, toSquare, fromSquare, MoveType.NORMAL.ordinal());
                     }
                 }
             }
@@ -100,7 +101,7 @@ public class PawnMoveGenerator implements Board {
         while (leftCaptures != 0) {
             int toSquare = Long.numberOfTrailingZeros(leftCaptures);
             int fromSquare = color == 0 ? toSquare - 7 : toSquare + 9;
-            isPromotionMove(color, moves, 1L << toSquare, toSquare, fromSquare);
+            addPawnMove(color, moves, toSquare, fromSquare, MoveType.ATTACK.ordinal());
             leftCaptures &= leftCaptures - 1;
         }
 
@@ -108,7 +109,7 @@ public class PawnMoveGenerator implements Board {
         while (rightCaptures != 0) {
             int toSquare = Long.numberOfTrailingZeros(rightCaptures);
             int fromSquare = color == 0 ? toSquare - 9 : toSquare + 7;
-            isPromotionMove(color, moves, 1L << toSquare, toSquare, fromSquare);
+            addPawnMove(color, moves, toSquare, fromSquare, MoveType.ATTACK.ordinal());
             rightCaptures &= rightCaptures - 1;
         }
     }
@@ -146,17 +147,17 @@ public class PawnMoveGenerator implements Board {
         }
     }
 
-    private static long isPromotionMove(int color, List<Integer> moves, long captures, int toSquare, int fromSquare) {
+    private static void addPawnMove(int color, List<Integer> moves, int toSquare, int fromSquare, int moveType) {
         if ((toSquare >= 56 && color == 0) || (toSquare < 8 && color == 1)) { // Promotion
+            int promoType = (moveType == MoveType.ATTACK.ordinal())
+                    ? MoveType.ATTACK.ordinal()
+                    : MoveType.PROMOTION.ordinal();
             for (int promotionPiece = 1; promotionPiece <= 4; promotionPiece++) {
-                moves.add((fromSquare << 14) | (toSquare << 7) | (4 << 4) | promotionPiece);
+                moves.add((fromSquare << 14) | (toSquare << 7) | (promoType << 4) | promotionPiece);
             }
         } else {
-            moves.add((fromSquare << 14) | (toSquare << 7));
+            moves.add((fromSquare << 14) | (toSquare << 7) | (moveType << 4));
         }
-
-        captures &= captures - 1;
-        return captures;
     }
 
 }

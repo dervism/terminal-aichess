@@ -44,7 +44,8 @@ public class KingMoveGenerator implements Board, Chess {
             // Check if the move is inside the board and not a wrap-around move
             if (toSquare >= 0 && toSquare < 64 && Math.abs((fromSquare % 8) - (toSquare % 8)) <= 2) {
                 if ((friendlyPieces & (1L << toSquare)) == 0) {
-                    moves.add((fromSquare << 14) | (toSquare << 7));
+                    int type = ((1L << toSquare) & enemyPieces) != 0 ? MoveType.ATTACK.ordinal() : 0;
+                    moves.add((fromSquare << 14) | (toSquare << 7) | (type << 4));
                 }
             }
         }

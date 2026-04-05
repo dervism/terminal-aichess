@@ -2,6 +2,7 @@ package no.dervis.terminal_games.terminal_chess.moves.generator;
 
 import no.dervis.terminal_games.terminal_chess.board.Bitboard;
 import no.dervis.terminal_games.terminal_chess.board.Board;
+import no.dervis.terminal_games.terminal_chess.board.Chess.MoveType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,10 +21,11 @@ public class KnightMoveGenerator implements Board {
         List<Integer> moves = new ArrayList<>();
 
         long knights = color == 0 ? whitePieces[1] : blackPieces[1];
-        long friendlyPieces = 0;
+        long friendlyPieces = 0, enemyPieces = 0;
 
         for (int i = 0; i < 6; i++) {
             friendlyPieces |= (color == 0 ? whitePieces[i] : blackPieces[i]);
+            enemyPieces |= (color == 0 ? blackPieces[i] : whitePieces[i]);
         }
 
         while (knights != 0) {
@@ -32,7 +34,8 @@ public class KnightMoveGenerator implements Board {
 
             while (knightMoves != 0) {
                 int toSquare = Long.numberOfTrailingZeros(knightMoves);
-                moves.add((fromSquare << 14) | (toSquare << 7));
+                int type = ((1L << toSquare) & enemyPieces) != 0 ? MoveType.ATTACK.ordinal() : 0;
+                moves.add((fromSquare << 14) | (toSquare << 7) | (type << 4));
                 knightMoves &= knightMoves - 1;
             }
 

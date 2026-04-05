@@ -2,6 +2,7 @@ package no.dervis.terminal_games.terminal_chess.moves.generator;
 
 import no.dervis.terminal_games.terminal_chess.board.Bitboard;
 import no.dervis.terminal_games.terminal_chess.board.Board;
+import no.dervis.terminal_games.terminal_chess.board.Chess.MoveType;
 import no.dervis.terminal_games.terminal_chess.board.MagicBitboard;
 
 import java.util.ArrayList;
@@ -38,7 +39,8 @@ public class RookMoveGenerator implements Board {
 
             while (rookMovesBitboard != 0) {
                 int toSquare = Long.numberOfTrailingZeros(rookMovesBitboard);
-                moves.add((fromSquare << 14) | (toSquare << 7));
+                int type = ((1L << toSquare) & enemyPieces) != 0 ? MoveType.ATTACK.ordinal() : 0;
+                moves.add((fromSquare << 14) | (toSquare << 7) | (type << 4));
                 rookMovesBitboard &= rookMovesBitboard - 1;
             }
             rooksBitboard &= rooksBitboard - 1;

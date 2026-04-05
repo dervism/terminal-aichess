@@ -9,6 +9,7 @@ import no.dervis.terminal_games.terminal_chess.board.Chess;
 import no.dervis.terminal_games.terminal_chess.moves.Move;
 import no.dervis.terminal_games.terminal_chess.moves.generator.Generator;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Scanner;
 import java.util.function.Function;
@@ -56,15 +57,28 @@ public class TerminalChess implements BoardPrinter {
 
                 var userMoves = generator.generateMoves(board.turn());
                 var parsedInput = parseMove(userInput);
-                parsedInput.flatMap(
-                        parsedMove -> userMoves
-                                .stream()
-                                .map(move -> new Tuple2<>(move, Move.createMove(move, board)))
-                                .filter(t2 -> t2.right().fromSquare() == parsedMove.left().index())
-                                .filter(t2 -> t2.right().toSquare() == parsedMove.right().index())
-                                .findFirst())
-                        .ifPresentOrElse(legalUserMove -> board.makeMove(legalUserMove.left()),
-                                () -> System.out.println("Please enter a legal move."));
+                parsedInput.ifPresentOrElse(parsedMove -> {
+                    List<Tuple2<Integer, Move>> matching = userMoves.stream()
+                            .map(move -> new Tuple2<>(move, Move.createMove(move, board)))
+                            .filter(t2 -> t2.right().fromSquare() == parsedMove.left().index())
+                            .filter(t2 -> t2.right().toSquare() == parsedMove.right().index())
+                            .toList();
+
+                    if (matching.isEmpty()) {
+                        System.out.println("Please enter a legal move.");
+                    } else if (matching.size() == 1) {
+                        board.makeMove(matching.getFirst().left());
+                    } else {
+                        // Multiple moves for same from/to — promotion choice
+                        int chosen = askPromotionPiece();
+                        matching.stream()
+                                .filter(t2 -> t2.right().promotionPiece() == chosen)
+                                .findFirst()
+                                .ifPresentOrElse(
+                                        t2 -> board.makeMove(t2.left()),
+                                        () -> System.out.println("Invalid promotion choice."));
+                    }
+                }, () -> System.out.println("Please enter a legal move."));
             } else {
                 getMoveFromComputer(ai, board, thinkTimeMs);
             }
@@ -127,6 +141,26 @@ public class TerminalChess implements BoardPrinter {
     private static String getMoveFromUser() {
         System.out.print("Enter your move: ");
         return scanner.nextLine();
+    }
+
+    private static int askPromotionPiece() {
+        System.out.println("Promote pawn to:");
+        System.out.println("  1. Knight (N)");
+        System.out.println("  2. Bishop (B)");
+        System.out.println("  3. Rook   (R)");
+        System.out.println("  4. Queen  (Q)");
+        System.out.print("Choice (1-4): ");
+        String choice = scanner.nextLine().trim();
+        return switch (choice) {
+            case "1", "n", "N" -> Chess.knight;
+            case "2", "b", "B" -> Chess.bishop;
+            case "3", "r", "R" -> Chess.rook;
+            case "4", "q", "Q" -> Chess.queen;
+            default -> {
+                System.out.println("Defaulting to Queen.");
+                yield Chess.queen;
+            }
+        };
     }
 
     private static long chooseDifficulty() {

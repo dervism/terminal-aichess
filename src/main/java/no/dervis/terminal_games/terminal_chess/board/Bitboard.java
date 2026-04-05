@@ -150,7 +150,7 @@ public class Bitboard implements Board, Chess {
         }
 
         // Handle promotion
-        if (moveType == 4) {
+        if (promotionPiece > 0) {
             if (color == white) {
                 whitePieces[pawn] &= ~toBitboard; // Remove promoted white pawn
                 whitePieces[promotionPiece] |= toBitboard; // Add promoted white piece
