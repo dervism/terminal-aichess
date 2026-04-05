@@ -16,7 +16,7 @@ Running in your terminal:
 
 In your terminal, this is what the app will look like.
 
-<img height="256" src="board.png" width="250"/>
+<img height="250" src="board.png" width="250"/>
 
 See the [README for more information](src/main/java/no/dervis/terminal_games/terminal_chess/README.md) about how to play.
 

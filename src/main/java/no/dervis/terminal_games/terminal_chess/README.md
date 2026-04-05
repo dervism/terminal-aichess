@@ -23,6 +23,10 @@ On startup you are prompted to:
 | 4. Expert | 10 seconds |
 | 5. Extra hard | 50 seconds |
 
+3. **Choose engine**:
+   - **Single-threaded** -- standard iterative-deepening alpha-beta search.
+   - **Parallel (Lazy SMP)** -- multiple threads share a transposition table for stronger play.
+
 ## Entering moves
 
 Two input formats are supported. Standard algebraic notation (SAN) is tried first, with coordinate format as a fallback.
@@ -51,8 +55,28 @@ Specify the source and target squares separated by a dash: `e2-e4`, `g1-f3`.
 
 When a pawn reaches the last rank, you are prompted to choose a promotion piece (Knight, Bishop, Rook, or Queen). If you use SAN with a promotion suffix (e.g. `e8=Q`), the piece is selected automatically.
 
+## Commands
+
+The following commands can be entered instead of a move during your turn:
+
+| Command | Description |
+|---------|-------------|
+| `fen` | Print the current position as a FEN string |
+| `r` | Resign the game |
+| `q` | Quit immediately without saving |
+
 ## During the game
 
 - The AI prints its search progress (depth, score, nodes, principal variation) while thinking.
 - Check, checkmate, stalemate, and insufficient material are detected automatically.
-- Type `q` to quit.
+
+## Game over
+
+When a game ends (checkmate, stalemate, insufficient material, resignation, or quit) you are presented with four options:
+
+1. **New game without saving** -- start a fresh game.
+2. **Save and start new game** -- save the game to a file, then start a fresh game.
+3. **Save game and quit** -- save the game to a file, then exit.
+4. **Quit** -- exit without saving.
+
+Saved games are written to the `saves/` folder. Each file contains the date and time, player assignments (player/computer), engine type, difficulty level, result, the final FEN string, and the full move history.
