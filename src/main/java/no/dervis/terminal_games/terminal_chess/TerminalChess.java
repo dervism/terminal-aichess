@@ -1,6 +1,6 @@
 package no.dervis.terminal_games.terminal_chess;
 
-import no.dervis.terminal_games.terminal_chess.ai.ChessAI;
+import no.dervis.terminal_games.terminal_chess.ai.alphabeta.ChessAI;
 import no.dervis.terminal_games.terminal_chess.board.Bitboard;
 import no.dervis.terminal_games.terminal_chess.board.Board.Tuple2;
 import no.dervis.terminal_games.terminal_chess.board.Board.Tuple3;

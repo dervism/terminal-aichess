@@ -1,5 +1,7 @@
 package no.dervis.terminal_games.terminal_chess.ai;
 
+import no.dervis.terminal_games.terminal_chess.ai.alphabeta.ChessAI;
+import no.dervis.terminal_games.terminal_chess.ai.alphabeta.Evaluation;
 import no.dervis.terminal_games.terminal_chess.board.Bitboard;
 import no.dervis.terminal_games.terminal_chess.board.Board;
 import no.dervis.terminal_games.terminal_chess.board.Chess;
