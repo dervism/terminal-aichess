@@ -212,4 +212,32 @@ class PerftTest implements Chess {
     void position5_depth4() {
         assertEquals(2_103_487, perft(position5(), 4));
     }
+
+    // ---------------------------------------------------------------
+    // Position 6: Mirrored, no castling rights.
+    // ---------------------------------------------------------------
+
+    private Bitboard position6() {
+        return Bitboard.fromFEN("r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - -");
+    }
+
+    @Test
+    void position6_depth1() {
+        assertEquals(46, perft(position6(), 1));
+    }
+
+    @Test
+    void position6_depth2() {
+        assertEquals(2079, perft(position6(), 2));
+    }
+
+    @Test
+    void position6_depth3() {
+        assertEquals(89_890, perft(position6(), 3));
+    }
+
+    @Test
+    void position6_depth4() {
+        assertEquals(3_894_594, perft(position6(), 4));
+    }
 }

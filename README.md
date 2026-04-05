@@ -34,6 +34,43 @@ See the [README for more information](src/main/java/no/dervis/terminal_games/ter
 - [ ] Implement opening book
 - [ ] Implement superior ai (monte-carlo simulation and neural networks)
 
+### Move generation correctness
+
+The move generator is validated with [perft](https://www.chessprogramming.org/Perft_Results) -- a standard test that counts leaf nodes at each depth and compares against known-correct values from the [Chess Programming Wiki](https://www.chessprogramming.org/Perft_Results).
+
+Unit tests cover depths 1--5 for all six positions. A standalone deep runner pushes further:
+
+| Position | Max depth | Nodes at max depth |
+|----------|----------:|-----------:|
+| [Initial position](https://www.chessprogramming.org/Perft_Results#Initial_Position) | 6 | 119,060,324 |
+| [Kiwipete](https://www.chessprogramming.org/Perft_Results#Position_2) | 6 | 8,031,647,685 |
+| [Position 3](https://www.chessprogramming.org/Perft_Results#Position_3) (endgame) | 7 | 178,633,661 |
+| [Position 4](https://www.chessprogramming.org/Perft_Results#Position_4) (promotions) | 6 | 706,045,033 |
+| [Position 5](https://www.chessprogramming.org/Perft_Results#Position_5) (discovered checks) | 5 | 89,941,194 |
+| [Position 6](https://www.chessprogramming.org/Perft_Results#Position_6) (mirrored) | 6 | 6,923,051,137 |
+
+All results match at every depth. The `--parallel` flag distributes root moves across all cores (copy-make means each thread gets its own board with zero contention):
+
+| Position | Single-threaded | Parallel (14 cores) | Speedup |
+|----------|----------------:|---------:|--------:|
+| 1 (initial) depth 6 | 6,803ms | 1,314ms | **5.2x** |
+| 2 (Kiwipete) depth 6 | 471,712ms | 101,960ms | **4.6x** |
+| 3 (endgame) depth 6 | 759ms | 102ms | **7.4x** |
+| 4 (promotions) depth 6 | 42,112ms | 9,320ms | **4.5x** |
+| 5 (discovered checks) depth 5 | 5,216ms | 626ms | **8.3x** |
+| 6 (mirrored) depth 6 | 401,771ms | 54,662ms | **7.4x** |
+
+To run the deep tests:
+
+```bash
+# single-threaded
+java -cp target/classes no.dervis.terminal_games.terminal_chess.PerftDeep --depth 7
+
+# parallel — root moves split across all available cores
+java -cp target/classes no.dervis.terminal_games.terminal_chess.PerftDeep --depth 7 --parallel
+```
+
+
 ## Terminal Tic-tac-toe
 A complete Java 25 Tic-tac-toe game that can scale to custom sized nxn boards.
 

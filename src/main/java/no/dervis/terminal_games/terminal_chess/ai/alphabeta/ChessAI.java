@@ -24,7 +24,7 @@ import java.util.Random;
  *   <li>Configurable time management</li>
  * </ul>
  */
-public class ChessAI implements Chess {
+public class ChessAI implements Chess, Engine {
 
     // ===== Constants =====
     private static final int MAX_PLY = 128;

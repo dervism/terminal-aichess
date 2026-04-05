@@ -1,6 +1,8 @@
 package no.dervis.terminal_games.terminal_chess;
 
 import no.dervis.terminal_games.terminal_chess.ai.alphabeta.ChessAI;
+import no.dervis.terminal_games.terminal_chess.ai.alphabeta.Engine;
+import no.dervis.terminal_games.terminal_chess.ai.alphabeta.ParallelChessAI;
 import no.dervis.terminal_games.terminal_chess.board.Bitboard;
 import no.dervis.terminal_games.terminal_chess.board.Board.Tuple2;
 import no.dervis.terminal_games.terminal_chess.board.Board.Tuple3;
@@ -31,7 +33,6 @@ public class TerminalChess implements BoardPrinter {
         Bitboard board = new Bitboard();
         board.initialiseBoard();
         Generator generator = new Generator(board);
-        ChessAI ai = new ChessAI();
 
         System.out.println(Chess.boardToStr.apply(board, true));
         boolean status = true;
@@ -41,6 +42,7 @@ public class TerminalChess implements BoardPrinter {
         int userTurn = userColor ? white : black;
 
         long thinkTimeMs = chooseDifficulty();
+        Engine ai = chooseEngine();
 
         String userInput = "";
 
@@ -77,13 +79,24 @@ public class TerminalChess implements BoardPrinter {
                 } else if (matching.size() == 1) {
                     board.makeMove(matching.getFirst().left());
                 } else {
-                    int chosen = askPromotionPiece();
-                    matching.stream()
-                            .filter(t2 -> t2.right().promotionPiece() == chosen)
-                            .findFirst()
-                            .ifPresentOrElse(
-                                    t2 -> board.makeMove(t2.left()),
-                                    () -> System.out.println("Invalid promotion choice."));
+                    // Multiple matches: check if it's a promotion (same from-square,
+                    // different promotion pieces) or an ambiguous move (different from-squares)
+                    boolean isPromotion = matching.stream()
+                            .map(t2 -> t2.right().fromSquare())
+                            .distinct()
+                            .count() == 1;
+
+                    if (isPromotion) {
+                        int chosen = askPromotionPiece();
+                        matching.stream()
+                                .filter(t2 -> t2.right().promotionPiece() == chosen)
+                                .findFirst()
+                                .ifPresentOrElse(
+                                        t2 -> board.makeMove(t2.left()),
+                                        () -> System.out.println("Invalid promotion choice."));
+                    } else {
+                        System.out.println("Ambiguous move. Please disambiguate (e.g. Reg3, R3g3).");
+                    }
                 }
             } else {
                 getMoveFromComputer(ai, board, thinkTimeMs);
@@ -117,7 +130,22 @@ public class TerminalChess implements BoardPrinter {
         }
     }
 
-    private static void getMoveFromComputer(ChessAI ai, Bitboard board, long thinkTimeMs) {
+    private static Engine chooseEngine() {
+        System.out.println("Choose engine:");
+        System.out.println("  1. Single-threaded");
+        System.out.println("  2. Parallel (Lazy SMP)");
+        System.out.print("Engine (1/2): ");
+        String choice = scanner.nextLine().trim();
+        if (choice.equals("2")) {
+            int cores = Runtime.getRuntime().availableProcessors();
+            System.out.println("Using parallel engine with " + cores + " threads.");
+            return new ParallelChessAI();
+        }
+        System.out.println("Using single-threaded engine.");
+        return new ChessAI();
+    }
+
+    private static void getMoveFromComputer(Engine ai, Bitboard board, long thinkTimeMs) {
         System.out.println("Thinking...");
         int move = ai.findBestMove(board, thinkTimeMs);
         if (move == 0) {
@@ -144,7 +172,7 @@ public class TerminalChess implements BoardPrinter {
         }
     }
 
-    private static List<Tuple2<Integer, Move>> matchSAN(String input, List<Integer> legalMoves, Bitboard board) {
+    static List<Tuple2<Integer, Move>> matchSAN(String input, List<Integer> legalMoves, Bitboard board) {
         try {
             String san = input.trim().replaceAll("[+#]", "");
             if (san.isEmpty()) return List.of();
