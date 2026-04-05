@@ -11,6 +11,12 @@ import no.dervis.terminal_games.terminal_chess.board.Chess;
 import no.dervis.terminal_games.terminal_chess.moves.Move;
 import no.dervis.terminal_games.terminal_chess.moves.generator.Generator;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Scanner;
@@ -23,6 +29,10 @@ public class TerminalChess implements BoardPrinter {
 
     final static Scanner scanner = new Scanner(System.in);
 
+    private static final Path SAVES_DIR = Path.of("saves");
+    private static final DateTimeFormatter FILE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
+    private static final DateTimeFormatter DISPLAY_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
     final static Function<Tuple2<String, Integer>, Tuple3> t2ToT3 = value ->
             new Tuple3(
                     /*row*/    value.right(),
@@ -30,31 +40,59 @@ public class TerminalChess implements BoardPrinter {
                     /*index*/  indexFn.apply(value.right(), columnToIndex.apply(value.left())));
 
     public static void main(String[] args) {
+        boolean playAgain = true;
+
+        while (playAgain) {
+            playAgain = playGame();
+        }
+
+        scanner.close();
+    }
+
+    private static boolean playGame() {
         Bitboard board = new Bitboard();
         board.initialiseBoard();
         Generator generator = new Generator(board);
 
         System.out.println(Chess.boardToStr.apply(board, true));
-        boolean status = true;
 
         System.out.print("Play white or black? (w/b) ");
         boolean userColor = scanner.nextLine().equalsIgnoreCase("w");
         int userTurn = userColor ? white : black;
 
-        long thinkTimeMs = chooseDifficulty();
-        Engine ai = chooseEngine();
+        String strengthLabel = chooseDifficultyLabel();
+        long thinkTimeMs = thinkTimeFromLabel(strengthLabel);
+        String engineLabel = chooseEngineLabel();
+        Engine ai = createEngine(engineLabel);
 
-        String userInput = "";
+        String whitePlayer = (userTurn == white) ? "player" : "computer";
+        String blackPlayer = (userTurn == black) ? "player" : "computer";
+
+        List<String> moveHistory = new ArrayList<>();
+        boolean status = true;
+        String result = "";
 
         while (status) {
 
             if (userTurn == board.turn()) {
-                userInput = getMoveFromUser();
+                String userInput = getMoveFromUser();
 
                 if (userInput.equals("q")) {
-                    scanner.close();
-                    System.out.println("Quitting.");
+                    result = "abandoned";
                     break;
+                }
+
+                if (userInput.equals("r")) {
+                    String winner = (userTurn == white) ? "Black" : "White";
+                    System.out.println(winner + " wins by resignation.");
+                    result = (userTurn == white) ? "0-1" : "1-0";
+                    status = false;
+                    break;
+                }
+
+                if (userInput.equalsIgnoreCase("fen")) {
+                    System.out.println("FEN: " + board.toFEN());
+                    continue;
                 }
 
                 var userMoves = generator.generateMoves(board.turn());
@@ -76,7 +114,9 @@ public class TerminalChess implements BoardPrinter {
 
                 if (matching.isEmpty()) {
                     System.out.println("Please enter a legal move.");
+                    continue;
                 } else if (matching.size() == 1) {
+                    moveHistory.add(matching.getFirst().right().toAlgebraic());
                     board.makeMove(matching.getFirst().left());
                 } else {
                     // Multiple matches: check if it's a promotion (same from-square,
@@ -88,18 +128,27 @@ public class TerminalChess implements BoardPrinter {
 
                     if (isPromotion) {
                         int chosen = askPromotionPiece();
-                        matching.stream()
+                        var selected = matching.stream()
                                 .filter(t2 -> t2.right().promotionPiece() == chosen)
-                                .findFirst()
-                                .ifPresentOrElse(
-                                        t2 -> board.makeMove(t2.left()),
-                                        () -> System.out.println("Invalid promotion choice."));
+                                .findFirst();
+                        if (selected.isPresent()) {
+                            moveHistory.add(selected.get().right().toAlgebraic());
+                            board.makeMove(selected.get().left());
+                        } else {
+                            System.out.println("Invalid promotion choice.");
+                            continue;
+                        }
                     } else {
                         System.out.println("Ambiguous move. Please select one of the pieces (e.g. Reg3, Rgg3).");
+                        continue;
                     }
                 }
             } else {
-                getMoveFromComputer(ai, board, thinkTimeMs);
+                int move = getMoveFromComputer(ai, board, thinkTimeMs);
+                if (move != 0) {
+                    moveHistory.add(Move.createMove(move, board).toAlgebraic());
+                    board.makeMove(move);
+                }
             }
 
             clearTerminal();
@@ -109,15 +158,19 @@ public class TerminalChess implements BoardPrinter {
             switch (gameState) {
                 case CHECKMATE -> {
                     int loser = board.turn();
-                    System.out.println("Checkmate! " + (loser == white ? "Black" : "White") + " wins!");
+                    String winner = (loser == white) ? "Black" : "White";
+                    System.out.println("Checkmate! " + winner + " wins!");
+                    result = (loser == white) ? "0-1" : "1-0";
                     status = false;
                 }
                 case STALEMATE -> {
                     System.out.println("Draw by stalemate!");
+                    result = "1/2-1/2";
                     status = false;
                 }
                 case INSUFFICIENT_MATERIAL -> {
                     System.out.println("Draw by insufficient material!");
+                    result = "1/2-1/2";
                     status = false;
                 }
                 case ONGOING -> {
@@ -128,33 +181,93 @@ public class TerminalChess implements BoardPrinter {
                 }
             }
         }
+
+        return handleGameOver(board, result, whitePlayer, blackPlayer,
+                engineLabel, strengthLabel, moveHistory);
     }
 
-    private static Engine chooseEngine() {
-        System.out.println("Choose engine:");
-        System.out.println("  1. Single-threaded");
-        System.out.println("  2. Parallel (Lazy SMP)");
-        System.out.print("Engine (1/2): ");
+    private static boolean handleGameOver(Bitboard board, String result,
+                                          String whitePlayer, String blackPlayer,
+                                          String engineLabel, String strengthLabel,
+                                          List<String> moveHistory) {
+        System.out.println();
+        System.out.println("Game over.");
+        System.out.println("  1. New game without saving");
+        System.out.println("  2. Save and start new game");
+        System.out.println("  3. Save game and quit");
+        System.out.println("  4. Quit");
+        System.out.print("Choice (1-4): ");
         String choice = scanner.nextLine().trim();
-        if (choice.equals("2")) {
-            int cores = Runtime.getRuntime().availableProcessors();
-            System.out.println("Using parallel engine with " + cores + " threads.");
-            return new ParallelChessAI();
-        }
-        System.out.println("Using single-threaded engine.");
-        return new ChessAI();
+
+        return switch (choice) {
+            case "2" -> {
+                saveGame(board, result, whitePlayer, blackPlayer,
+                        engineLabel, strengthLabel, moveHistory);
+                yield true;
+            }
+            case "3" -> {
+                saveGame(board, result, whitePlayer, blackPlayer,
+                        engineLabel, strengthLabel, moveHistory);
+                System.out.println("Goodbye.");
+                yield false;
+            }
+            case "4" -> {
+                System.out.println("Goodbye.");
+                yield false;
+            }
+            default -> true;
+        };
     }
 
-    private static void getMoveFromComputer(Engine ai, Bitboard board, long thinkTimeMs) {
+    private static void saveGame(Bitboard board, String result,
+                                 String whitePlayer, String blackPlayer,
+                                 String engineLabel, String strengthLabel,
+                                 List<String> moveHistory) {
+        try {
+            Files.createDirectories(SAVES_DIR);
+
+            LocalDateTime now = LocalDateTime.now();
+            String filename = "game_" + now.format(FILE_FMT) + ".txt";
+            Path file = SAVES_DIR.resolve(filename);
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("Date:     ").append(now.format(DISPLAY_FMT)).append('\n');
+            sb.append("White:    ").append(whitePlayer).append('\n');
+            sb.append("Black:    ").append(blackPlayer).append('\n');
+            sb.append("Engine:   ").append(engineLabel).append('\n');
+            sb.append("Strength: ").append(strengthLabel).append('\n');
+            sb.append("Result:   ").append(result.isEmpty() ? "unknown" : result).append('\n');
+            sb.append("FEN:      ").append(board.toFEN()).append('\n');
+            sb.append('\n');
+            sb.append("Moves:\n");
+
+            for (int i = 0; i < moveHistory.size(); i++) {
+                if (i % 2 == 0) {
+                    sb.append(String.format("%d. %s", (i / 2) + 1, moveHistory.get(i)));
+                } else {
+                    sb.append(" ").append(moveHistory.get(i)).append('\n');
+                }
+            }
+            // Trailing newline if last move was white's (odd total)
+            if (moveHistory.size() % 2 == 1) sb.append('\n');
+
+            Files.writeString(file, sb.toString());
+            System.out.println("Game saved to " + file);
+        } catch (IOException e) {
+            System.out.println("Failed to save game: " + e.getMessage());
+        }
+    }
+
+    private static int getMoveFromComputer(Engine ai, Bitboard board, long thinkTimeMs) {
         System.out.println("Thinking...");
         int move = ai.findBestMove(board, thinkTimeMs);
         if (move == 0) {
             System.out.println("No legal moves available.");
-            return;
+            return 0;
         }
         Move computerMove = Move.createMove(move, board);
         System.out.println("Computer move: " + computerMove.toStringShort());
-        board.makeMove(move);
+        return move;
     }
 
     private static Optional<Tuple2<Tuple3, Tuple3>> parseMove(String move) {
@@ -265,7 +378,7 @@ public class TerminalChess implements BoardPrinter {
     }
 
     private static String getMoveFromUser() {
-        System.out.print("Enter move (e.g. Nf3, e4, exd5, O-O or e2-e4): ");
+        System.out.print("Enter move, or command (fen=print board, r=resign): ");
         return scanner.nextLine();
     }
 
@@ -289,7 +402,7 @@ public class TerminalChess implements BoardPrinter {
         };
     }
 
-    private static long chooseDifficulty() {
+    private static String chooseDifficultyLabel() {
         System.out.println("Select difficulty:");
         System.out.println("  1. Easy       (1 second)");
         System.out.println("  2. Medium     (3 seconds)");
@@ -299,16 +412,49 @@ public class TerminalChess implements BoardPrinter {
         System.out.print("Choice (1-5): ");
         String choice = scanner.nextLine().trim();
         return switch (choice) {
-            case "1" -> 1000;
-            case "2" -> 3000;
-            case "3" -> 5000;
-            case "4" -> 10000;
-            case "5" -> 50000;
+            case "1" -> "Easy";
+            case "2" -> "Medium";
+            case "3" -> "Hard";
+            case "4" -> "Expert";
+            case "5" -> "Extra hard";
             default -> {
                 System.out.println("Invalid choice, defaulting to Medium.");
-                yield 3000;
+                yield "Medium";
             }
         };
+    }
+
+    private static long thinkTimeFromLabel(String label) {
+        return switch (label) {
+            case "Easy" -> 1000;
+            case "Medium" -> 3000;
+            case "Hard" -> 5000;
+            case "Expert" -> 10000;
+            case "Extra hard" -> 50000;
+            default -> 3000;
+        };
+    }
+
+    private static String chooseEngineLabel() {
+        System.out.println("Choose engine:");
+        System.out.println("  1. Single-threaded");
+        System.out.println("  2. Parallel (Lazy SMP)");
+        System.out.print("Engine (1/2): ");
+        String choice = scanner.nextLine().trim();
+        if (choice.equals("2")) {
+            int cores = Runtime.getRuntime().availableProcessors();
+            System.out.println("Using parallel engine with " + cores + " threads.");
+            return "Parallel (Lazy SMP)";
+        }
+        System.out.println("Using single-threaded engine.");
+        return "Single-threaded";
+    }
+
+    private static Engine createEngine(String engineLabel) {
+        if (engineLabel.startsWith("Parallel")) {
+            return new ParallelChessAI();
+        }
+        return new ChessAI();
     }
 
     private static void clearTerminal() {
@@ -317,6 +463,3 @@ public class TerminalChess implements BoardPrinter {
         System.out.flush();
     }
 }
-
-
-
