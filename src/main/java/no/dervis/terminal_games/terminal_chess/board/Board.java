@@ -3,11 +3,9 @@ package no.dervis.terminal_games.terminal_chess.board;
 import java.util.function.Function;
 
 import static no.dervis.terminal_games.terminal_chess.board.Board.Tuple3.of;
+import static no.dervis.terminal_games.terminal_chess.board.BoardPrinter.*;
 
 public interface Board {
-
-    int RIGHT_EDGE = 0;
-    int LEFT_EDGE = 7;
 
     long FILE_A = 0x0101010101010101L;
     long FILE_B = 0x0202020202020202L;
@@ -20,11 +18,11 @@ public interface Board {
 
     record Tuple3(int rank, int file, int index) {
         public static Tuple3 of(int index) {
-            return new Tuple3(BoardPrinter.rowFn.apply(index), BoardPrinter.columnFn.apply(index), index);
+            return new Tuple3(rowFn.apply(index), columnFn.apply(index), index);
         }
 
         public String square() {
-            return BoardPrinter.columnToStr.apply(file) + (rank + 1);
+            return columnToStr.apply(file) + (rank + 1);
         }
 
         @Override

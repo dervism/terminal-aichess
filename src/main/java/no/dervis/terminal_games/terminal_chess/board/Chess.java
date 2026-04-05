@@ -19,12 +19,6 @@ public interface Chess {
     int white = 0;
     int black = 1;
 
-    int[] piece_value = {198, 817, 836, 1270, 2521, 0};
-
-    int INFINITE = Integer.MAX_VALUE;
-    int CHECKMATE = 10000;
-    int DRAW = 999;
-
     enum MoveType {
         NORMAL,
         EN_PASSANT,

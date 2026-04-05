@@ -136,10 +136,10 @@ public class ChessAI implements Chess {
                     ? "mate " + mateInMoves(score)
                     : "cp " + score;
 
-            Move bestMoveDecoded = Move.createMove(bestMoveRoot, board);
-            System.out.printf("  info depth %d score %s nodes %d time %dms pv %s%n",
-                    depth, scoreStr, nodesSearched, elapsed,
-                    bestMoveDecoded.toStringShort());
+            String pvLine = extractPV(board, depth);
+            System.out.printf("\rinfo depth %d score %s nodes %d time %dms pv %s          ",
+                    depth, scoreStr, nodesSearched, elapsed, pvLine);
+            System.out.flush();
 
             // Time management: if more than half the time is used, don't start a new depth
             if (elapsed > timeLimitMs / 2) break;
@@ -147,6 +147,7 @@ public class ChessAI implements Chess {
             // Stop if we found a forced mate
             if (Math.abs(score) > MATE_THRESHOLD) break;
         }
+        System.out.println();
 
         return bestMoveRoot;
     }
@@ -497,6 +498,42 @@ public class ChessAI implements Chess {
         hash ^= ZOBRIST_CASTLING[board.castlingRights()];
 
         return hash;
+    }
+
+    // ===== PV Extraction =====
+
+    /**
+     * Extracts the principal variation by walking the transposition table.
+     * Returns a string in standard algebraic notation, e.g. "e4 e5 Nf3 Nc6 Bc4 Bc5".
+     */
+    private String extractPV(Bitboard board, int maxLength) {
+        StringBuilder sb = new StringBuilder();
+        Bitboard copy = board.copy();
+        long[] seenHashes = new long[maxLength];
+        int pvLength = 0;
+
+        for (int i = 0; i < maxLength; i++) {
+            long hash = computeHash(copy);
+
+            // Cycle detection
+            for (int j = 0; j < pvLength; j++) {
+                if (seenHashes[j] == hash) return sb.toString().trim();
+            }
+            seenHashes[pvLength++] = hash;
+
+            int ttIdx = (int) (hash & TT_MASK);
+            if (ttKey[ttIdx] != hash || ttMove[ttIdx] == 0) break;
+
+            int move = ttMove[ttIdx];
+            Move decoded = Move.createMove(move, copy);
+            boolean capture = isCapture(move, copy);
+            if (sb.length() > 0) sb.append(' ');
+            sb.append(decoded.toAlgebraic(capture));
+
+            copy.makeMove(move);
+        }
+
+        return sb.toString().trim();
     }
 
     // ===== Helpers =====
