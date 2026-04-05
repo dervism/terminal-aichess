@@ -27,7 +27,8 @@ See the [README for more information](src/main/java/no/dervis/terminal_games/ter
 - [x] Implement basic move generation
 - [x] Implement complete move generation (checks, attacks, castling, en-passant, promotions)
 - [x] Implement legal moves filtering
-- [ ] Implement perft move generation analysis
+- [x] Implement FEN string generation
+- [x] Implement perft move generation analysis
 - [x] Implement basic AI (𝛼/ϐ search)
 - [x] Implement advanced AI (𝛼/ϐ search + iterative deepening + quiescence search + Negamax + Principal Variation Search (PVS) + transposition table + check extensions + Late Move Reductions (LMR) + Killer & History heuristics + time management)
 - [ ] Implement opening book

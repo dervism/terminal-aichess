@@ -307,6 +307,10 @@ class BitboardTest implements Board, Chess {
         board.setPiece(bishop, black, c8.index());
         board.setPiece(queen, black, d8.index());
 
+        // pawns to block open files (prevents queen from attacking through-squares)
+        board.setPiece(pawn, white, d2.index());
+        board.setPiece(pawn, black, d7.index());
+
         System.out.println(boardToStr.apply(board, false));
 
         // when all officers are in place, no castling moves should be generated
@@ -346,5 +350,83 @@ class BitboardTest implements Board, Chess {
                 .toList();
         assertEquals(1, queensideCastleMoveBlack.size());
         assertEquals(MoveType.CASTLE_QUEEN_SIDE.ordinal(), Move.createMove(queensideCastleMoveBlack.get(0).left(), board).moveType());
+    }
+
+    @Test
+    void fromFEN_initialPosition() {
+        Bitboard fromFen = Bitboard.fromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        Bitboard manual = new Bitboard();
+        manual.initialiseBoard();
+
+        for (int sq = 0; sq < 64; sq++) {
+            assertEquals(manual.getPiece(sq), fromFen.getPiece(sq), "Mismatch at square " + sq);
+        }
+        assertEquals(manual.turn(), fromFen.turn());
+        assertEquals(manual.castlingRights(), fromFen.castlingRights());
+    }
+
+    @Test
+    void fromFEN_kiwipete() {
+        Bitboard board = Bitboard.fromFEN("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
+
+        assertEquals(rook, board.getPiece(a1.index()));
+        assertEquals(king, board.getPiece(e1.index()));
+        assertEquals(rook, board.getPiece(h1.index()));
+        assertEquals(knight + 6, board.getPiece(b6.index()));
+        assertEquals(queen + 6, board.getPiece(e7.index()));
+        assertEquals(knight, board.getPiece(e5.index()));
+        assertEquals(white, board.turn());
+        assertEquals(0b1111, board.castlingRights());
+    }
+
+    @Test
+    void fromFEN_blackToMove() {
+        Bitboard board = Bitboard.fromFEN("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 b - -");
+
+        assertEquals(black, board.turn());
+        assertEquals(0, board.castlingRights());
+        assertEquals(king, board.getPiece(a5.index()));
+        assertEquals(king + 6, board.getPiece(h4.index()));
+    }
+
+    @Test
+    void fromFEN_partialCastling() {
+        Bitboard board = Bitboard.fromFEN("r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w Kq -");
+
+        assertEquals(0b1001, board.castlingRights()); // K=0b0001, q=0b1000
+    }
+
+    @Test
+    void toFEN_initialPosition() {
+        Bitboard board = new Bitboard();
+        board.initialiseBoard();
+
+        String fen = board.toFEN();
+        assertTrue(fen.startsWith("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq"));
+    }
+
+    @Test
+    void toFEN_roundTrip() {
+        String[] fens = {
+                "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq",
+                "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq",
+                "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 b -",
+                "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq",
+                "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ",
+        };
+
+        for (String fen : fens) {
+            Bitboard board = Bitboard.fromFEN(fen);
+            String output = board.toFEN();
+            // Compare the piece placement, color, and castling parts
+            assertTrue(output.startsWith(fen.split(" - ")[0].split(" 0 ")[0]),
+                    "Round-trip failed for: " + fen + "\n  Got: " + output);
+        }
+    }
+
+    @Test
+    void toFEN_noCastling() {
+        Bitboard board = Bitboard.fromFEN("8/8/8/4k3/8/8/8/4K3 w - -");
+        assertTrue(board.toFEN().contains(" - "));
     }
 }

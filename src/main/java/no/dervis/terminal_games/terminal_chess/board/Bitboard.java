@@ -30,6 +30,14 @@ public class Bitboard implements Board, Chess {
         return copy;
     }
 
+    public static Bitboard fromFEN(String fen) {
+        return FEN.toBoard(fen);
+    }
+
+    public String toFEN() {
+        return FEN.fromBoard(this);
+    }
+
     public void initialiseBoard() {
         // Initialize pawns
         whitePieces[0] = 0x000000000000FF00L;
@@ -209,6 +217,14 @@ public class Bitboard implements Board, Chess {
 
     public int turn() {
         return colorToMove;
+    }
+
+    public void setColorToMove(int color) {
+        this.colorToMove = color;
+    }
+
+    public void setCastlingRights(int rights) {
+        this.castlingRights = rights;
     }
 
     public long opponentPieces(int color) {
