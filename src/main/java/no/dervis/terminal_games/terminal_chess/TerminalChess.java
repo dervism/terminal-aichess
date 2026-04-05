@@ -56,29 +56,35 @@ public class TerminalChess implements BoardPrinter {
                 }
 
                 var userMoves = generator.generateMoves(board.turn());
-                var parsedInput = parseMove(userInput);
-                parsedInput.ifPresentOrElse(parsedMove -> {
-                    List<Tuple2<Integer, Move>> matching = userMoves.stream()
-                            .map(move -> new Tuple2<>(move, Move.createMove(move, board)))
-                            .filter(t2 -> t2.right().fromSquare() == parsedMove.left().index())
-                            .filter(t2 -> t2.right().toSquare() == parsedMove.right().index())
-                            .toList();
 
-                    if (matching.isEmpty()) {
-                        System.out.println("Please enter a legal move.");
-                    } else if (matching.size() == 1) {
-                        board.makeMove(matching.getFirst().left());
-                    } else {
-                        // Multiple moves for same from/to — promotion choice
-                        int chosen = askPromotionPiece();
-                        matching.stream()
-                                .filter(t2 -> t2.right().promotionPiece() == chosen)
-                                .findFirst()
-                                .ifPresentOrElse(
-                                        t2 -> board.makeMove(t2.left()),
-                                        () -> System.out.println("Invalid promotion choice."));
+                // Try SAN first, then fall back to coordinate format
+                List<Tuple2<Integer, Move>> matching = matchSAN(userInput, userMoves, board);
+
+                if (matching.isEmpty()) {
+                    var parsedInput = parseMove(userInput);
+                    if (parsedInput.isPresent()) {
+                        var parsedMove = parsedInput.get();
+                        matching = userMoves.stream()
+                                .map(move -> new Tuple2<>(move, Move.createMove(move, board)))
+                                .filter(t2 -> t2.right().fromSquare() == parsedMove.left().index())
+                                .filter(t2 -> t2.right().toSquare() == parsedMove.right().index())
+                                .toList();
                     }
-                }, () -> System.out.println("Please enter a legal move."));
+                }
+
+                if (matching.isEmpty()) {
+                    System.out.println("Please enter a legal move.");
+                } else if (matching.size() == 1) {
+                    board.makeMove(matching.getFirst().left());
+                } else {
+                    int chosen = askPromotionPiece();
+                    matching.stream()
+                            .filter(t2 -> t2.right().promotionPiece() == chosen)
+                            .findFirst()
+                            .ifPresentOrElse(
+                                    t2 -> board.makeMove(t2.left()),
+                                    () -> System.out.println("Invalid promotion choice."));
+                }
             } else {
                 getMoveFromComputer(ai, board, thinkTimeMs);
             }
@@ -138,8 +144,100 @@ public class TerminalChess implements BoardPrinter {
         }
     }
 
+    private static List<Tuple2<Integer, Move>> matchSAN(String input, List<Integer> legalMoves, Bitboard board) {
+        try {
+            String san = input.trim().replaceAll("[+#]", "");
+            if (san.isEmpty()) return List.of();
+
+            // Castling
+            if (san.equals("O-O") || san.equals("0-0")) {
+                return legalMoves.stream()
+                        .map(m -> new Tuple2<>(m, Move.createMove(m, board)))
+                        .filter(t -> t.right().moveType() == Chess.MoveType.CASTLE_KING_SIDE.ordinal())
+                        .toList();
+            }
+            if (san.equals("O-O-O") || san.equals("0-0-0")) {
+                return legalMoves.stream()
+                        .map(m -> new Tuple2<>(m, Move.createMove(m, board)))
+                        .filter(t -> t.right().moveType() == Chess.MoveType.CASTLE_QUEEN_SIDE.ordinal())
+                        .toList();
+            }
+
+            // Parse promotion suffix (e.g. e8=Q)
+            int promoPiece = 0;
+            if (san.contains("=")) {
+                int eqIdx = san.indexOf('=');
+                if (eqIdx + 1 < san.length()) {
+                    promoPiece = switch (san.charAt(eqIdx + 1)) {
+                        case 'N' -> Chess.knight;
+                        case 'B' -> Chess.bishop;
+                        case 'R' -> Chess.rook;
+                        case 'Q' -> Chess.queen;
+                        default -> 0;
+                    };
+                }
+                san = san.substring(0, eqIdx);
+            }
+
+            // Determine piece type from first character
+            int pieceType;
+            int startIdx;
+            char first = san.charAt(0);
+            if (first >= 'A' && first <= 'Z') {
+                pieceType = switch (first) {
+                    case 'N' -> Chess.knight;
+                    case 'B' -> Chess.bishop;
+                    case 'R' -> Chess.rook;
+                    case 'Q' -> Chess.queen;
+                    case 'K' -> Chess.king;
+                    default -> -1;
+                };
+                if (pieceType == -1) return List.of();
+                startIdx = 1;
+            } else {
+                pieceType = Chess.pawn;
+                startIdx = 0;
+            }
+
+            // Strip piece letter and capture marker
+            String rest = san.substring(startIdx).replace("x", "");
+            if (rest.length() < 2) return List.of();
+
+            // Target square is the last two characters
+            char fileChar = rest.charAt(rest.length() - 2);
+            char rankChar = rest.charAt(rest.length() - 1);
+            int targetFile = fileChar - 'a';
+            int targetRank = rankChar - '1';
+            if (targetFile < 0 || targetFile > 7 || targetRank < 0 || targetRank > 7) return List.of();
+            int targetSquare = targetRank * 8 + targetFile;
+
+            // Disambiguation characters (e.g. Nbd2 -> "b", R1d1 -> "1", Qh4e1 -> "h4")
+            String disambig = rest.substring(0, rest.length() - 2);
+            int disambigFile = -1;
+            int disambigRank = -1;
+            for (char c : disambig.toCharArray()) {
+                if (c >= 'a' && c <= 'h') disambigFile = c - 'a';
+                else if (c >= '1' && c <= '8') disambigRank = c - '1';
+            }
+
+            final int pt = pieceType, ts = targetSquare;
+            final int df = disambigFile, dr = disambigRank, pp = promoPiece;
+
+            return legalMoves.stream()
+                    .map(m -> new Tuple2<>(m, Move.createMove(m, board)))
+                    .filter(t -> t.right().piece() == pt)
+                    .filter(t -> t.right().toSquare() == ts)
+                    .filter(t -> df == -1 || (t.right().fromSquare() % 8) == df)
+                    .filter(t -> dr == -1 || (t.right().fromSquare() / 8) == dr)
+                    .filter(t -> pp == 0 || t.right().promotionPiece() == pp)
+                    .toList();
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
     private static String getMoveFromUser() {
-        System.out.print("Enter your move: ");
+        System.out.print("Enter move (e.g. Nf3, e4, exd5, O-O or e2-e4): ");
         return scanner.nextLine();
     }
 
