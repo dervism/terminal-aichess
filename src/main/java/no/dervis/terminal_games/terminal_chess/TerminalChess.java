@@ -95,7 +95,7 @@ public class TerminalChess implements BoardPrinter {
                                         t2 -> board.makeMove(t2.left()),
                                         () -> System.out.println("Invalid promotion choice."));
                     } else {
-                        System.out.println("Ambiguous move. Please disambiguate (e.g. Reg3, R3g3).");
+                        System.out.println("Ambiguous move. Please select one of the pieces (e.g. Reg3, Rgg3).");
                     }
                 }
             } else {

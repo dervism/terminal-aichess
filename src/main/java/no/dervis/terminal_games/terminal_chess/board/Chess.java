@@ -59,7 +59,7 @@ public interface Chess {
                     String line = IntStream.range(0, 8)
                             .mapToObj(col -> {
                                 String square = pieceToStr.apply(board.getPiece(BoardPrinter.indexFn.apply(row, col)));
-                                if ((row + col) % 2 == 0) {
+                                if ((row + col) % 2 != 0) {
                                     return "\u001B[47m"+square+"\u001B[0m";
                                 } else {
                                     return square;
