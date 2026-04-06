@@ -93,14 +93,26 @@ public class ParallelChessAI implements Chess, Engine {
     private final int numThreads;
     private SearchWorker[] workers;
 
+    private final boolean verbose;
+
     // ===== Constructors =====
 
     public ParallelChessAI() {
-        this(Runtime.getRuntime().availableProcessors());
+        this(Runtime.getRuntime().availableProcessors(), true);
+    }
+
+    public ParallelChessAI(boolean verbose) {
+        this(Runtime.getRuntime().availableProcessors(), verbose);
     }
 
     public ParallelChessAI(int numThreads) {
         this.numThreads = Math.max(1, numThreads);
+        this.verbose = true;
+    }
+
+    public ParallelChessAI(int numThreads, boolean verbose) {
+        this.numThreads = Math.max(1, numThreads);
+        this.verbose = verbose;
     }
 
     // ===== Public API =====
@@ -150,7 +162,7 @@ public class ParallelChessAI implements Chess, Engine {
         }
 
         long elapsed = System.currentTimeMillis() - startTime;
-        System.out.printf("info threads %d total nodes %,d time %dms%n",
+        System.out.printf("[ParallelAI] info threads %d total nodes %,d time %dms%n",
                 numThreads, totalNodes, elapsed);
 
         return bestMove;
@@ -281,13 +293,15 @@ public class ParallelChessAI implements Chess, Engine {
                     for (SearchWorker w : workers) totalNodes += w.nodesSearched;
                     long nps = elapsed > 0 ? (totalNodes * 1000) / elapsed : 0;
 
-                    String scoreStr = isMateScore(score)
+                    if (verbose) {
+                        String scoreStr = isMateScore(score)
                             ? "mate " + mateInMoves(score)
                             : "cp " + score;
-                    String pvLine = extractPV(board, depth);
-                    System.out.printf("\rinfo depth %d score %s nodes %d nps %d time %dms pv %s          ",
-                            depth, scoreStr, totalNodes, nps, elapsed, pvLine);
-                    System.out.flush();
+                        String pvLine = extractPV(board, depth);
+                        System.out.printf("\r[ParallelAI] info depth %d score %s nodes %d nps %d time %dms pv %s          ",
+                                depth, scoreStr, totalNodes, nps, elapsed, pvLine);
+                        System.out.flush();
+                    }
 
                     // Don't start a new depth if more than half the time is used
                     if (elapsed > timeLimitMs / 2) {

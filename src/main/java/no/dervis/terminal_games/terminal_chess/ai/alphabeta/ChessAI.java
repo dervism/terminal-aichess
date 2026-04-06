@@ -93,6 +93,16 @@ public class ChessAI implements Chess, Engine {
     // Best move from the last completed iteration (safe fallback if search is interrupted)
     private int bestMoveRoot;
 
+    private final boolean verbose;
+
+    public ChessAI() {
+        this(true);
+    }
+
+    public ChessAI(boolean verbose) {
+        this.verbose = verbose;
+    }
+
     // ===== Public API =====
 
     /**
@@ -122,6 +132,7 @@ public class ChessAI implements Chess, Engine {
 
         bestMoveRoot = rootMoves.getFirst();
         int bestScore = -INFINITY;
+        int completedDepth = 0;
 
         // Iterative deepening
         for (int depth = 1; depth <= MAX_PLY; depth++) {
@@ -130,16 +141,19 @@ public class ChessAI implements Chess, Engine {
             if (stopped) break;
 
             bestScore = score;
+            completedDepth = depth;
 
             long elapsed = System.currentTimeMillis() - startTime;
             String scoreStr = isMateScore(score)
                     ? "mate " + mateInMoves(score)
                     : "cp " + score;
 
-            String pvLine = extractPV(board, depth);
-            System.out.printf("\rinfo depth %d score %s nodes %d time %dms pv %s          ",
+            if (verbose) {
+                String pvLine = extractPV(board, depth);
+            System.out.printf("\r[SingleAI] info depth %d score %s nodes %d time %dms pv %s          ",
                     depth, scoreStr, nodesSearched, elapsed, pvLine);
             System.out.flush();
+            }
 
             // Time management: if more than half the time is used, don't start a new depth
             if (elapsed > timeLimitMs / 2) break;
@@ -147,7 +161,10 @@ public class ChessAI implements Chess, Engine {
             // Stop if we found a forced mate
             if (Math.abs(score) > MATE_THRESHOLD) break;
         }
-        System.out.println();
+
+        long elapsed = System.currentTimeMillis() - startTime;
+        System.out.printf("%n[SingleAI] info depth %d total nodes %,d time %dms%n",
+                completedDepth, nodesSearched, elapsed);
 
         return bestMoveRoot;
     }

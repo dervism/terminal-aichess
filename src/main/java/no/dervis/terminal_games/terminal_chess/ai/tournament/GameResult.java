@@ -10,6 +10,7 @@ public record GameResult(
         String whiteName,
         String blackName,
         String result,
+        String drawReason,
         String finalFEN,
         int totalMoves,
         List<String> moveHistory

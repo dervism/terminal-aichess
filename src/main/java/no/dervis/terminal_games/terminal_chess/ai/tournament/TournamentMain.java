@@ -20,9 +20,12 @@ public class TournamentMain {
         System.out.println("Starting tournament: Single-threaded vs Parallel (Lazy SMP)");
         System.out.printf("Rounds: %d | Think time: %d ms%n%n", rounds, thinkTimeMs);
 
+        ChessAI engine1 = new ChessAI(false);
+        ParallelChessAI engine2 = new ParallelChessAI(false);
+
         TournamentResult result = Tournament.builder()
-                .engine1(new EngineConfig("Single", new ChessAI(), thinkTimeMs))
-                .engine2(new EngineConfig("Parallel", new ParallelChessAI(), thinkTimeMs))
+                .engine1(new EngineConfig("Single", engine1, thinkTimeMs))
+                .engine2(new EngineConfig("Parallel", engine2, thinkTimeMs + 500))
                 .rounds(rounds)
                 .outputDir(Path.of("tournaments"))
                 .verbose(true)
