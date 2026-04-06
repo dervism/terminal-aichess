@@ -69,6 +69,8 @@ public class TerminalChess implements BoardPrinter {
         String blackPlayer = (userTurn == black) ? "player" : "computer";
 
         List<String> moveHistory = new ArrayList<>();
+        List<String> positionHistory = new ArrayList<>();
+        positionHistory.add(board.positionKey());
         boolean status = true;
         String result = "";
 
@@ -118,6 +120,7 @@ public class TerminalChess implements BoardPrinter {
                 } else if (matching.size() == 1) {
                     moveHistory.add(matching.getFirst().right().toAlgebraic());
                     board.makeMove(matching.getFirst().left());
+                    positionHistory.add(board.positionKey());
                 } else {
                     // Multiple matches: check if it's a promotion (same from-square,
                     // different promotion pieces) or an ambiguous move (different from-squares)
@@ -134,6 +137,7 @@ public class TerminalChess implements BoardPrinter {
                         if (selected.isPresent()) {
                             moveHistory.add(selected.get().right().toAlgebraic());
                             board.makeMove(selected.get().left());
+                            positionHistory.add(board.positionKey());
                         } else {
                             System.out.println("Invalid promotion choice.");
                             continue;
@@ -148,6 +152,7 @@ public class TerminalChess implements BoardPrinter {
                 if (move != 0) {
                     moveHistory.add(Move.createMove(move, board).toAlgebraic());
                     board.makeMove(move);
+                    positionHistory.add(board.positionKey());
                 }
             }
 
@@ -173,10 +178,21 @@ public class TerminalChess implements BoardPrinter {
                     result = "1/2-1/2";
                     status = false;
                 }
+                case FIFTY_MOVE_RULE -> {
+                    System.out.println("Draw by 50-move rule!");
+                    result = "1/2-1/2";
+                    status = false;
+                }
                 case ONGOING -> {
-                    int kingSquare = Long.numberOfTrailingZeros(board.kingPiece(board.turn()));
-                    if (Generator.isKingInCheck(board, board.turn(), kingSquare)) {
-                        System.out.println("Check!");
+                    if (Generator.isThreefoldRepetition(positionHistory)) {
+                        System.out.println("Draw by threefold repetition!");
+                        result = "1/2-1/2";
+                        status = false;
+                    } else {
+                        int kingSquare = Long.numberOfTrailingZeros(board.kingPiece(board.turn()));
+                        if (Generator.isKingInCheck(board, board.turn(), kingSquare)) {
+                            System.out.println("Check!");
+                        }
                     }
                 }
             }

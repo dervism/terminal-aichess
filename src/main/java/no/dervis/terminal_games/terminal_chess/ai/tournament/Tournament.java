@@ -101,7 +101,10 @@ public class Tournament implements Chess {
         board.initialiseBoard();
         Generator generator = new Generator(board);
         List<String> moveHistory = new ArrayList<>();
+        List<String> positionHistory = new ArrayList<>();
+        positionHistory.add(board.positionKey());
         String result = "";
+        String drawReason = "";
         int moveCount = 0;
 
         while (moveCount < MAX_MOVES_PER_GAME) {
@@ -112,6 +115,7 @@ public class Tournament implements Chess {
 
             moveHistory.add(Move.createMove(move, board).toAlgebraic());
             board.makeMove(move);
+            positionHistory.add(board.positionKey());
             moveCount++;
 
             Generator.GameState state = generator.getGameState(board.turn());
@@ -120,15 +124,32 @@ public class Tournament implements Chess {
                     int loser = board.turn();
                     result = (loser == white) ? "0-1" : "1-0";
                 }
-                case STALEMATE, INSUFFICIENT_MATERIAL -> result = "1/2-1/2";
-                case ONGOING -> { }
+                case STALEMATE -> {
+                    result = "1/2-1/2";
+                    drawReason = "stalemate";
+                }
+                case INSUFFICIENT_MATERIAL -> {
+                    result = "1/2-1/2";
+                    drawReason = "insufficient material";
+                }
+                case FIFTY_MOVE_RULE -> {
+                    result = "1/2-1/2";
+                    drawReason = "50-move rule";
+                }
+                case ONGOING -> {
+                    if (Generator.isThreefoldRepetition(positionHistory)) {
+                        result = "1/2-1/2";
+                        drawReason = "threefold repetition";
+                    }
+                }
             }
 
             if (!result.isEmpty()) break;
         }
 
         if (result.isEmpty()) {
-            result = "1/2-1/2"; // max moves reached — adjudicate as draw
+            result = "1/2-1/2";
+            drawReason = "max moves reached";
         }
 
         return new GameResult(
@@ -136,6 +157,7 @@ public class Tournament implements Chess {
                 whiteEngine.name(),
                 blackEngine.name(),
                 result,
+                drawReason,
                 board.toFEN(),
                 moveCount,
                 moveHistory
@@ -169,10 +191,14 @@ public class Tournament implements Chess {
             sb.append("Game Details\n");
             sb.append("------------\n");
             for (GameResult game : result.games()) {
+                String resultLabel = game.result();
+                if (!game.drawReason().isEmpty()) {
+                    resultLabel += " (" + game.drawReason() + ")";
+                }
                 sb.append(String.format("Game %d: %s (W) vs %s (B) — %s (%d moves)%n",
                         game.gameNumber(),
                         game.whiteName(), game.blackName(),
-                        game.result(), game.totalMoves()));
+                        resultLabel, game.totalMoves()));
                 sb.append("FEN: ").append(game.finalFEN()).append('\n');
                 sb.append("Moves: ");
                 List<String> moves = game.moveHistory();

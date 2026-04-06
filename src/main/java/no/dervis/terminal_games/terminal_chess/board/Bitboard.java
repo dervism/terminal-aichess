@@ -11,6 +11,7 @@ public class Bitboard implements Board, Chess {
     private LinkedList<Integer> history;
     private int castlingRights;
     private int colorToMove;
+    private int halfMoveClock;
 
     public Bitboard() {
         whitePieces = new long[6];
@@ -18,6 +19,7 @@ public class Bitboard implements Board, Chess {
         history = new LinkedList<>();
         colorToMove = 0;
         castlingRights = 0b1111;
+        halfMoveClock = 0;
     }
 
     public Bitboard copy() {
@@ -27,6 +29,7 @@ public class Bitboard implements Board, Chess {
         copy.history = new LinkedList<>(history);
         copy.castlingRights = castlingRights;
         copy.colorToMove = colorToMove;
+        copy.halfMoveClock = halfMoveClock;
         return copy;
     }
 
@@ -118,6 +121,15 @@ public class Bitboard implements Board, Chess {
         int color = piece / 6;
         int pieceType = piece % 6;
 
+        // Update half-move clock: reset on pawn moves or captures, increment otherwise
+        boolean isCapture = getPiece(toSquare) != -1
+                || moveType == MoveType.EN_PASSANT.ordinal();
+        if (pieceType == pawn || isCapture) {
+            halfMoveClock = 0;
+        } else {
+            halfMoveClock++;
+        }
+
         long fromBitboard = 1L << fromSquare;
         long toBitboard = 1L << toSquare;
 
@@ -192,6 +204,44 @@ public class Bitboard implements Board, Chess {
         }
 
         colorToMove ^= 1;
+    }
+
+    /**
+     * Returns a key that uniquely identifies the current position for
+     * threefold repetition detection. Includes piece placement, side to
+     * move, and castling rights (matching the FEN fields that define a position).
+     */
+    public String positionKey() {
+        StringBuilder sb = new StringBuilder();
+        for (int rank = 7; rank >= 0; rank--) {
+            int empty = 0;
+            for (int file = 0; file < 8; file++) {
+                int p = getPiece(rank * 8 + file);
+                if (p == -1) { empty++; continue; }
+                if (empty > 0) { sb.append(empty); empty = 0; }
+                int c = p / 6;
+                int pt = p % 6;
+                char ch = switch (pt) {
+                    case pawn -> 'p'; case knight -> 'n'; case bishop -> 'b';
+                    case rook -> 'r'; case queen -> 'q'; case king -> 'k';
+                    default -> '?';
+                };
+                sb.append(c == white ? Character.toUpperCase(ch) : ch);
+            }
+            if (empty > 0) sb.append(empty);
+            if (rank > 0) sb.append('/');
+        }
+        sb.append(' ').append(colorToMove == white ? 'w' : 'b');
+        sb.append(' ').append(castlingRights);
+        return sb.toString();
+    }
+
+    public int halfMoveClock() {
+        return halfMoveClock;
+    }
+
+    public void setHalfMoveClock(int halfMoveClock) {
+        this.halfMoveClock = halfMoveClock;
     }
 
     public long[] whitePieces() {

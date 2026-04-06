@@ -54,7 +54,15 @@ public class FEN {
             board.setCastlingRights(rights);
         }
 
-        // Fields 4-6 (en passant, halfmove, fullmove) are not tracked by Bitboard
+        // 4. En passant target square (skip)
+
+        // 5. Halfmove clock
+        if (parts.length > 4) {
+            try { board.setHalfMoveClock(Integer.parseInt(parts[4])); }
+            catch (NumberFormatException ignored) {}
+        }
+
+        // 6. Fullmove number (not tracked)
 
         return board;
     }
@@ -111,8 +119,12 @@ public class FEN {
             if ((castlingRights & 0b1000) != 0) sb.append('q');
         }
 
-        // 4-6. En passant, halfmove clock, fullmove number (not tracked)
-        sb.append(" - 0 1");
+        // 4. En passant (not tracked)
+        sb.append(" -");
+        // 5. Halfmove clock
+        sb.append(' ').append(board.halfMoveClock());
+        // 6. Fullmove number (not tracked)
+        sb.append(" 1");
 
         return sb.toString();
     }

@@ -20,11 +20,13 @@ public class Generator implements Chess {
     }
 
     public enum GameState {
-        ONGOING, CHECKMATE, STALEMATE, INSUFFICIENT_MATERIAL
+        ONGOING, CHECKMATE, STALEMATE, INSUFFICIENT_MATERIAL,
+        FIFTY_MOVE_RULE, THREEFOLD_REPETITION
     }
 
     public GameState getGameState(int color) {
         if (hasInsufficientMaterial()) return GameState.INSUFFICIENT_MATERIAL;
+        if (board.halfMoveClock() >= 100) return GameState.FIFTY_MOVE_RULE;
 
         List<Integer> legalMoves = generateMoves(color);
         if (!legalMoves.isEmpty()) return GameState.ONGOING;
@@ -33,6 +35,25 @@ public class Generator implements Chess {
         if (isKingInCheck(board, color, kingSquare)) return GameState.CHECKMATE;
 
         return GameState.STALEMATE;
+    }
+
+    /**
+     * Checks whether the most recent position in the given history has
+     * occurred at least three times (threefold repetition draw).
+     * <p>Position tracking is kept outside of {@link Bitboard} so that the
+     * engine's internal search (which calls {@code makeMove} millions of
+     * times) is not burdened with string allocation and list growth.
+     * Game loops should maintain their own {@code List<String>} by calling
+     * {@link Bitboard#positionKey()} after each real game move.</p>
+     */
+    public static boolean isThreefoldRepetition(List<String> positions) {
+        if (positions.size() < 5) return false;
+        String current = positions.getLast();
+        int count = 0;
+        for (String pos : positions) {
+            if (pos.equals(current) && ++count >= 3) return true;
+        }
+        return false;
     }
 
     public boolean hasInsufficientMaterial() {
