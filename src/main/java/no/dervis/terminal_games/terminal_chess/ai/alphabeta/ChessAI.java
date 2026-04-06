@@ -16,12 +16,14 @@ import java.util.Random;
  *   <li>Iterative deepening with aspiration windows</li>
  *   <li>Negamax alpha-beta pruning</li>
  *   <li>Principal Variation Search (PVS)</li>
- *   <li>Quiescence search (captures + check evasions)</li>
+ *   <li>Quiescence search with delta pruning</li>
  *   <li>Transposition table with Zobrist hashing</li>
- *   <li>Check extensions</li>
+ *   <li>Check extensions and singular extensions</li>
  *   <li>Null-move pruning</li>
- *   <li>Late Move Reductions (LMR)</li>
- *   <li>Move ordering: TT move → SEE-scored captures → killer moves → history heuristic</li>
+ *   <li>Reverse futility pruning, futility pruning, razoring</li>
+ *   <li>Late Move Reductions (history-informed) and Late Move Pruning</li>
+ *   <li>Internal Iterative Deepening</li>
+ *   <li>Move ordering: TT move → SEE captures → killers → countermove → history</li>
  *   <li>Configurable time management</li>
  * </ul>
  */
@@ -43,12 +45,45 @@ public class ChessAI implements Chess, Engine {
     private static final int CAPTURE_BASE     =  1_000_000;
     private static final int KILLER_SCORE_0   =    900_000;
     private static final int KILLER_SCORE_1   =    800_000;
+    private static final int COUNTERMOVE_SCORE =   700_000;
+
+    // Aspiration window
+    private static final int ASP_INITIAL_WINDOW = 25;
+
+    // Reverse Futility Pruning
+    private static final int RFP_MAX_DEPTH = 6;
+    private static final int RFP_MARGIN_PER_DEPTH = 80;
+
+    // Futility Pruning
+    private static final int FP_MAX_DEPTH = 2;
+    private static final int[] FP_MARGIN = {0, 200, 350};
+
+    // Late Move Pruning
+    private static final int LMP_MAX_DEPTH = 3;
+    private static final int[] LMP_MOVE_THRESHOLD = {0, 5, 8, 12};
+
+    // Razoring
+    private static final int RAZOR_MAX_DEPTH = 2;
+    private static final int[] RAZOR_MARGIN = {0, 300, 500};
+
+    // Delta pruning (quiescence)
+    private static final int DELTA_MARGIN = 200;
+
+    // Internal Iterative Deepening
+    private static final int IID_MIN_DEPTH = 4;
+    private static final int IID_REDUCTION = 2;
+
+    // Singular Extensions
+    private static final int SE_MIN_DEPTH = 8;
+    private static final int SE_MARGIN_MULTIPLIER = 2;
+
+    // History clamping
+    private static final int HISTORY_MAX = 16384;
 
     // MVV-LVA table: [victim][attacker] -> ordering score
-    // Higher victim value and lower attacker value = higher score
     private static final int[][] MVV_LVA = new int[6][6];
     static {
-        int[] values = {1, 3, 3, 5, 9, 10}; // relative piece ordering weights
+        int[] values = {1, 3, 3, 5, 9, 10};
         for (int victim = 0; victim < 6; victim++) {
             for (int attacker = 0; attacker < 6; attacker++) {
                 MVV_LVA[victim][attacker] = values[victim] * 10 - values[attacker];
@@ -67,7 +102,6 @@ public class ChessAI implements Chess, Engine {
     private final byte[] ttFlag  = new byte[TT_SIZE];
 
     // ===== Zobrist Hashing =====
-    // [piece_index 0..11][square 0..63]
     private static final long[][] ZOBRIST_PIECE = new long[12][64];
     private static final long ZOBRIST_SIDE;
     private static final long[] ZOBRIST_CASTLING = new long[16];
@@ -85,6 +119,7 @@ public class ChessAI implements Chess, Engine {
     // ===== Search State =====
     private final int[][] killers = new int[MAX_PLY][2];
     private final int[][][] history = new int[2][64][64];
+    private final int[][][] countermoves = new int[2][64][64];
 
     private long startTime;
     private long timeLimitMs;
@@ -123,6 +158,7 @@ public class ChessAI implements Chess, Engine {
         // Clear per-search tables
         clearKillers();
         clearHistory();
+        clearCountermoves();
 
         int color = board.turn();
         Generator gen = new Generator(board);
@@ -134,13 +170,39 @@ public class ChessAI implements Chess, Engine {
         bestMoveRoot = rootMoves.getFirst();
         int bestScore = -INFINITY;
         int completedDepth = 0;
+        int prevScore = 0;
 
-        // Iterative deepening
+        // Iterative deepening with aspiration windows
         for (int depth = 1; depth <= MAX_PLY; depth++) {
-            int score = searchRoot(board, rootMoves, depth, color);
+            int score;
+            if (depth <= 3) {
+                score = searchRoot(board, rootMoves, depth, color, -INFINITY, INFINITY);
+            } else {
+                int delta = ASP_INITIAL_WINDOW;
+                int aspAlpha = prevScore - delta;
+                int aspBeta = prevScore + delta;
+                while (true) {
+                    score = searchRoot(board, rootMoves, depth, color, aspAlpha, aspBeta);
+                    if (stopped) break;
+                    if (score <= aspAlpha) {
+                        aspAlpha = Math.max(aspAlpha - delta, -INFINITY);
+                        delta *= 2;
+                    } else if (score >= aspBeta) {
+                        aspBeta = Math.min(aspBeta + delta, INFINITY);
+                        delta *= 2;
+                    } else {
+                        break;
+                    }
+                    if (delta > 1000) {
+                        aspAlpha = -INFINITY;
+                        aspBeta = INFINITY;
+                    }
+                }
+            }
 
             if (stopped) break;
 
+            prevScore = score;
             bestScore = score;
             completedDepth = depth;
 
@@ -177,16 +239,15 @@ public class ChessAI implements Chess, Engine {
     /**
      * Root search with move ordering and best move tracking.
      */
-    private int searchRoot(Bitboard board, List<Integer> moves, int depth, int color) {
+    private int searchRoot(Bitboard board, List<Integer> moves, int depth, int color,
+                           int alpha, int beta) {
         long hash = computeHash(board);
         int ttMove = probeTTMove(hash);
 
         // Score and sort moves
-        int[] scores = scoreMoves(moves, board, ttMove, 0, color);
+        int[] scores = scoreMoves(moves, board, ttMove, 0, color, 0);
         sortMoves(moves, scores);
 
-        int alpha = -INFINITY;
-        int beta = INFINITY;
         int bestMove = moves.getFirst();
         int bestScore = -INFINITY;
 
@@ -197,12 +258,12 @@ public class ChessAI implements Chess, Engine {
 
             int score;
             if (i == 0) {
-                score = -alphaBeta(copy, depth - 1, -beta, -alpha, 1 - color, 1, true);
+                score = -alphaBeta(copy, depth - 1, -beta, -alpha, 1 - color, 1, true, move, 0);
             } else {
                 // PVS: null-window search for non-first moves
-                score = -alphaBeta(copy, depth - 1, -alpha - 1, -alpha, 1 - color, 1, false);
+                score = -alphaBeta(copy, depth - 1, -alpha - 1, -alpha, 1 - color, 1, false, move, 0);
                 if (score > alpha && score < beta) {
-                    score = -alphaBeta(copy, depth - 1, -beta, -alpha, 1 - color, 1, true);
+                    score = -alphaBeta(copy, depth - 1, -beta, -alpha, 1 - color, 1, true, move, 0);
                 }
             }
 
@@ -223,10 +284,10 @@ public class ChessAI implements Chess, Engine {
     }
 
     /**
-     * Negamax alpha-beta search with PVS, LMR, check extensions, and TT.
+     * Negamax alpha-beta search with all pruning and extension techniques.
      */
     private int alphaBeta(Bitboard board, int depth, int alpha, int beta,
-                          int color, int ply, boolean pvNode) {
+                          int color, int ply, boolean pvNode, int prevMove, int excludedMove) {
         // Time check every 4096 nodes
         if ((nodesSearched & 4095) == 0) checkTime();
         if (stopped) return 0;
@@ -239,7 +300,7 @@ public class ChessAI implements Chess, Engine {
         int ttIndex = (int) (hash & TT_MASK);
         if (ttKey[ttIndex] == hash) {
             ttHitMove = ttMove[ttIndex];
-            if (ttDepth[ttIndex] >= depth && !pvNode) {
+            if (ttDepth[ttIndex] >= depth && !pvNode && excludedMove == 0) {
                 int ttVal = ttScore[ttIndex];
                 byte flag = ttFlag[ttIndex];
                 if (flag == TT_EXACT) return ttVal;
@@ -248,9 +309,18 @@ public class ChessAI implements Chess, Engine {
             }
         }
 
+        // Internal Iterative Deepening: at PV nodes with no TT move,
+        // do a shallow search to find a move for ordering.
+        if (pvNode && ttHitMove == 0 && depth >= IID_MIN_DEPTH) {
+            alphaBeta(board, depth - IID_REDUCTION, alpha, beta, color, ply, true, prevMove, 0);
+            if (ttKey[ttIndex] == hash) {
+                ttHitMove = ttMove[ttIndex];
+            }
+        }
+
         // Check extension: extend search when in check
         long kingBB = board.kingPiece(color);
-        if (kingBB == 0) return -MATE_SCORE + ply; // king captured (shouldn't happen)
+        if (kingBB == 0) return -MATE_SCORE + ply;
         int kingSquare = Long.numberOfTrailingZeros(kingBB);
         boolean inCheck = Generator.isKingInCheck(board, color, kingSquare);
         if (inCheck) depth++;
@@ -258,22 +328,43 @@ public class ChessAI implements Chess, Engine {
         // Leaf node → quiescence search
         if (depth <= 0) return quiescence(board, alpha, beta, color, ply);
 
-        // Null-move pruning: if giving the opponent a free move still results
-        // in a beta cutoff, this position is likely so good we can prune it.
-        // Skip when in check, at PV nodes, or when side has no major/minor pieces.
+        // Null-move pruning
         if (!pvNode && !inCheck && depth >= 3 && hasNonPawnMaterial(board, color)) {
-            int R = 2 + (depth >= 6 ? 1 : 0); // adaptive reduction
+            int R = 2 + (depth >= 6 ? 1 : 0);
             Bitboard nullCopy = board.copy();
             nullCopy.makeNullMove();
             int nullScore = -alphaBeta(nullCopy, depth - 1 - R, -beta, -beta + 1,
-                    1 - color, ply + 1, false);
+                    1 - color, ply + 1, false, 0, 0);
             if (stopped) return 0;
             if (nullScore >= beta) {
-                // Don't trust mate scores from null move
                 if (nullScore > MATE_THRESHOLD) nullScore = beta;
                 return nullScore;
             }
         }
+
+        // Static evaluation for pruning decisions (not computed when in check)
+        int staticEval = inCheck ? -INFINITY : Evaluation.evaluate(board);
+
+        // Reverse Futility Pruning: position so good that full search won't change result
+        if (!pvNode && !inCheck && depth <= RFP_MAX_DEPTH
+                && staticEval - RFP_MARGIN_PER_DEPTH * depth >= beta
+                && Math.abs(beta) < MATE_THRESHOLD) {
+            return staticEval;
+        }
+
+        // Razoring: static eval far below alpha — verify with quiescence
+        if (!pvNode && !inCheck && depth <= RAZOR_MAX_DEPTH
+                && staticEval + RAZOR_MARGIN[depth] < alpha
+                && Math.abs(alpha) < MATE_THRESHOLD) {
+            int razorScore = quiescence(board, alpha, beta, color, ply);
+            if (razorScore <= alpha) return razorScore;
+        }
+
+        // Futility pruning flag (applied per-move in the loop)
+        boolean canFutilityPrune = !pvNode && !inCheck
+                && depth <= FP_MAX_DEPTH
+                && staticEval + FP_MARGIN[depth] < alpha
+                && Math.abs(alpha) < MATE_THRESHOLD;
 
         // Generate legal moves
         Generator gen = new Generator(board);
@@ -281,13 +372,33 @@ public class ChessAI implements Chess, Engine {
 
         // Terminal node detection
         if (moves.isEmpty()) {
-            if (inCheck) return -MATE_SCORE + ply; // checkmate (penalize distance)
-            return 0; // stalemate
+            if (inCheck) return -MATE_SCORE + ply;
+            return 0;
         }
 
         // Score and sort moves
-        int[] moveScores = scoreMoves(moves, board, ttHitMove, ply, color);
+        int[] moveScores = scoreMoves(moves, board, ttHitMove, ply, color, prevMove);
         sortMoves(moves, moveScores);
+
+        // Singular Extensions: if TT move is significantly better than alternatives, extend it
+        boolean singularExtension = false;
+        if (depth >= SE_MIN_DEPTH
+                && ttHitMove != 0
+                && excludedMove == 0
+                && ttKey[ttIndex] == hash
+                && ttDepth[ttIndex] >= depth - 3
+                && (ttFlag[ttIndex] == TT_BETA || ttFlag[ttIndex] == TT_EXACT)) {
+            int ttVal = ttScore[ttIndex];
+            if (Math.abs(ttVal) < MATE_THRESHOLD) {
+                int singularBeta = ttVal - SE_MARGIN_MULTIPLIER * depth;
+                int singularDepth = (depth - 1) / 2;
+                int singularScore = alphaBeta(board, singularDepth, singularBeta - 1, singularBeta,
+                        color, ply, false, prevMove, ttHitMove);
+                if (!stopped && singularScore < singularBeta) {
+                    singularExtension = true;
+                }
+            }
+        }
 
         int bestScore = -INFINITY;
         int bestMove = moves.getFirst();
@@ -295,41 +406,71 @@ public class ChessAI implements Chess, Engine {
 
         for (int i = 0; i < moves.size(); i++) {
             int move = moves.get(i);
-            Bitboard copy = board.copy();
-            copy.makeMove(move);
+
+            // Skip excluded move (for singular extension probe)
+            if (move == excludedMove) continue;
 
             boolean isCapture = isCapture(move, board);
+
+            // Futility pruning: skip quiet moves when static eval + margin < alpha
+            if (canFutilityPrune && !isCapture && i > 0) {
+                continue;
+            }
+
+            // Late Move Pruning: at low depths, skip late quiet moves entirely
+            if (!pvNode && !inCheck && depth <= LMP_MAX_DEPTH && !isCapture
+                    && i >= LMP_MOVE_THRESHOLD[depth]) {
+                continue;
+            }
+
+            Bitboard copy = board.copy();
+            copy.makeMove(move);
 
             int score;
             int newDepth = depth - 1;
 
-            // Late Move Reductions (LMR)
-            // Reduce non-PV, non-capture, non-check, later moves
+            // Singular extension: extend the TT move if it was found to be singular
+            if (singularExtension && move == ttHitMove) {
+                newDepth += 1;
+            }
+
+            // Late Move Reductions (LMR) — history-informed
             boolean doLMR = !pvNode && i >= 3 && depth >= 3 && !isCapture && !inCheck;
 
             if (doLMR) {
-                // Reduced-depth null-window search
                 int reduction = 1 + (i >= 6 ? 1 : 0);
+
+                // History-informed: adjust reduction based on history score
+                int from = move >>> 14;
+                int to = (move >>> 7) & 0x3F;
+                int histScore = history[color][from][to];
+                if (histScore < -1000) {
+                    reduction += 1;
+                } else if (histScore > 4000) {
+                    reduction = Math.max(0, reduction - 1);
+                }
+                reduction = Math.min(reduction, newDepth - 1);
+
                 score = -alphaBeta(copy, newDepth - reduction, -alpha - 1, -alpha,
-                        1 - color, ply + 1, false);
+                        1 - color, ply + 1, false, move, 0);
 
                 // Re-search at full depth if it fails high
                 if (score > alpha) {
                     score = -alphaBeta(copy, newDepth, -beta, -alpha,
-                            1 - color, ply + 1, pvNode);
+                            1 - color, ply + 1, pvNode, move, 0);
                 }
             } else if (!pvNode || i > 0) {
                 // PVS: null-window search for non-PV nodes or non-first moves
                 score = -alphaBeta(copy, newDepth, -alpha - 1, -alpha,
-                        1 - color, ply + 1, false);
+                        1 - color, ply + 1, false, move, 0);
                 if (score > alpha && score < beta) {
                     score = -alphaBeta(copy, newDepth, -beta, -alpha,
-                            1 - color, ply + 1, true);
+                            1 - color, ply + 1, true, move, 0);
                 }
             } else {
                 // Full window search for the first move in PV nodes
                 score = -alphaBeta(copy, newDepth, -beta, -alpha,
-                        1 - color, ply + 1, true);
+                        1 - color, ply + 1, true, move, 0);
             }
 
             if (stopped) return 0;
@@ -348,7 +489,27 @@ public class ChessAI implements Chess, Engine {
                             updateKillers(ply, move);
                             int from = move >>> 14;
                             int to = (move >>> 7) & 0x3F;
-                            history[color][from][to] += depth * depth;
+                            history[color][from][to] = Math.min(
+                                    history[color][from][to] + depth * depth, HISTORY_MAX);
+
+                            // Countermove: record this move as the refutation of prevMove
+                            if (prevMove != 0) {
+                                int prevFrom = prevMove >>> 14;
+                                int prevTo = (prevMove >>> 7) & 0x3F;
+                                int prevColor = 1 - color;
+                                countermoves[prevColor][prevFrom][prevTo] = move;
+                            }
+
+                            // History malus: penalize all previously searched quiet moves
+                            for (int j = 0; j < i; j++) {
+                                int prev = moves.get(j);
+                                if (prev != excludedMove && !isCapture(prev, board)) {
+                                    int pf = prev >>> 14;
+                                    int pt = (prev >>> 7) & 0x3F;
+                                    history[color][pf][pt] = Math.max(
+                                            history[color][pf][pt] - depth * depth, -HISTORY_MAX);
+                                }
+                            }
                         }
                         storeTT(hash, depth, beta, TT_BETA, bestMove);
                         return beta;
@@ -364,6 +525,7 @@ public class ChessAI implements Chess, Engine {
     /**
      * Quiescence search: only considers captures (and check evasions) to
      * avoid the horizon effect. Uses stand-pat score as the lower bound.
+     * Includes delta pruning and SEE pruning of losing captures.
      */
     private int quiescence(Bitboard board, int alpha, int beta, int color, int ply) {
         if ((nodesSearched & 4095) == 0) checkTime();
@@ -399,8 +561,7 @@ public class ChessAI implements Chess, Engine {
         }
 
         // Score and sort captures by SEE
-        int[] moveScores = scoreMoves(moves, board, 0, ply, color);
-        // Use a mutable copy for sorting
+        int[] moveScores = scoreMoves(moves, board, 0, ply, color, 0);
         var mutableMoves = new java.util.ArrayList<>(moves);
         sortMoves(mutableMoves, moveScores);
 
@@ -408,6 +569,21 @@ public class ChessAI implements Chess, Engine {
             // SEE pruning: skip losing captures in quiescence (unless in check)
             if (!inCheck && isCapture(move, board) && SEE.isLosingCapture(board, move)) {
                 continue;
+            }
+
+            // Delta pruning: skip captures where material gain + margin can't raise alpha
+            if (!inCheck && isCapture(move, board)) {
+                int to = (move >>> 7) & 0x3F;
+                int capturedPiece = board.getPiece(to);
+                int capturedValue;
+                if (capturedPiece != -1) {
+                    capturedValue = Evaluation.MG_PIECE_VALUE[capturedPiece % 6];
+                } else {
+                    capturedValue = Evaluation.MG_PIECE_VALUE[pawn]; // en passant
+                }
+                if (standPat + capturedValue + DELTA_MARGIN < alpha) {
+                    continue;
+                }
             }
 
             Bitboard copy = board.copy();
@@ -430,7 +606,7 @@ public class ChessAI implements Chess, Engine {
      * Scores each move for ordering. Higher score = searched first.
      */
     private int[] scoreMoves(List<Integer> moves, Bitboard board,
-                             int ttBestMove, int ply, int color) {
+                             int ttBestMove, int ply, int color, int prevMove) {
         int[] scores = new int[moves.size()];
         for (int i = 0; i < moves.size(); i++) {
             int move = moves.get(i);
@@ -448,15 +624,12 @@ public class ChessAI implements Chess, Engine {
                 // Capture: use SEE for accurate exchange evaluation
                 int seeScore = SEE.see(board, move);
                 if (seeScore >= 0) {
-                    // Winning/equal captures: base + SEE value
                     scores[i] = CAPTURE_BASE + seeScore;
                 } else {
-                    // Losing captures: below killers but above bad quiets
                     scores[i] = seeScore;
                 }
                 continue;
             } else {
-
                 // Killer moves
                 if (ply < MAX_PLY) {
                     if (move == killers[ply][0]) {
@@ -465,6 +638,17 @@ public class ChessAI implements Chess, Engine {
                     }
                     if (move == killers[ply][1]) {
                         scores[i] = KILLER_SCORE_1;
+                        continue;
+                    }
+                }
+
+                // Countermove bonus
+                if (prevMove != 0) {
+                    int prevFrom = prevMove >>> 14;
+                    int prevTo = (prevMove >>> 7) & 0x3F;
+                    int prevColor = 1 - color;
+                    if (move == countermoves[prevColor][prevFrom][prevTo]) {
+                        scores[i] = COUNTERMOVE_SCORE;
                         continue;
                     }
                 }
@@ -479,7 +663,6 @@ public class ChessAI implements Chess, Engine {
 
     /**
      * Partial selection sort: picks the best-scoring move to the front on each pass.
-     * Efficient because alpha-beta cutoffs mean we rarely examine all moves.
      */
     private void sortMoves(List<Integer> moves, int[] scores) {
         for (int i = 0; i < moves.size() - 1; i++) {
@@ -503,7 +686,6 @@ public class ChessAI implements Chess, Engine {
 
     private void storeTT(long hash, int depth, int score, byte flag, int move) {
         int index = (int) (hash & TT_MASK);
-        // Replace if new entry is deeper or same position
         if (depth >= ttDepth[index] || ttKey[index] == hash) {
             ttKey[index] = hash;
             ttMove[index] = move;
@@ -543,10 +725,6 @@ public class ChessAI implements Chess, Engine {
 
     // ===== PV Extraction =====
 
-    /**
-     * Extracts the principal variation by walking the transposition table.
-     * Returns a string in standard algebraic notation, e.g. "e4 e5 Nf3 Nc6 Bc4 Bc5".
-     */
     private String extractPV(Bitboard board, int maxLength) {
         StringBuilder sb = new StringBuilder();
         Bitboard copy = board.copy();
@@ -556,7 +734,6 @@ public class ChessAI implements Chess, Engine {
         for (int i = 0; i < maxLength; i++) {
             long hash = computeHash(copy);
 
-            // Cycle detection
             for (int j = 0; j < pvLength; j++) {
                 if (seenHashes[j] == hash) return sb.toString().trim();
             }
@@ -606,16 +783,18 @@ public class ChessAI implements Chess, Engine {
                 java.util.Arrays.fill(from, 0);
     }
 
+    private void clearCountermoves() {
+        for (int[][] color : countermoves)
+            for (int[] from : color)
+                java.util.Arrays.fill(from, 0);
+    }
+
     private void checkTime() {
         if (System.currentTimeMillis() - startTime >= timeLimitMs) {
             stopped = true;
         }
     }
 
-    /**
-     * Returns true if the given side has at least one non-pawn, non-king piece.
-     * Used to avoid null-move pruning in pawn-only endgames (zugzwang risk).
-     */
     private static boolean hasNonPawnMaterial(Bitboard board, int color) {
         return (Evaluation.getPieceBB(board, knight, color)
               | Evaluation.getPieceBB(board, bishop, color)
