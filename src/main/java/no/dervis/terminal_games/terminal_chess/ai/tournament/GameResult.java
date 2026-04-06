@@ -9,6 +9,7 @@ public record GameResult(
         int gameNumber,
         String whiteName,
         String blackName,
+        String opening,
         String result,
         String drawReason,
         String finalFEN,

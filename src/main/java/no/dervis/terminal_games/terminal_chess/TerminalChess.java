@@ -10,6 +10,7 @@ import no.dervis.terminal_games.terminal_chess.board.BoardPrinter;
 import no.dervis.terminal_games.terminal_chess.board.Chess;
 import no.dervis.terminal_games.terminal_chess.moves.Move;
 import no.dervis.terminal_games.terminal_chess.moves.generator.Generator;
+import no.dervis.terminal_games.terminal_chess.openingbook.OpeningBook;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -67,6 +68,9 @@ public class TerminalChess implements BoardPrinter {
 
         String whitePlayer = (userTurn == white) ? "player" : "computer";
         String blackPlayer = (userTurn == black) ? "player" : "computer";
+
+        OpeningBook book = new OpeningBook();
+        boolean engineInBook = true;
 
         List<String> moveHistory = new ArrayList<>();
         List<String> positionHistory = new ArrayList<>();
@@ -148,7 +152,18 @@ public class TerminalChess implements BoardPrinter {
                     }
                 }
             } else {
-                int move = getMoveFromComputer(ai, board, thinkTimeMs);
+                // Try the opening book first; fall back to engine search
+                int move = engineInBook ? book.getBookMove(board) : 0;
+                if (move != 0) {
+                    Move decoded = Move.createMove(move, board);
+                    System.out.println("Book move: " + decoded.toStringShort());
+                } else {
+                    if (engineInBook) {
+                        engineInBook = false;
+                        System.out.println("Opening: " + book.lastOpeningName());
+                    }
+                    move = getMoveFromComputer(ai, board, thinkTimeMs);
+                }
                 if (move != 0) {
                     moveHistory.add(Move.createMove(move, board).toAlgebraic());
                     board.makeMove(move);
