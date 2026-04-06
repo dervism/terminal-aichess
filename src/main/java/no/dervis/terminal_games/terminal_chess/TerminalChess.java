@@ -1,6 +1,9 @@
 package no.dervis.terminal_games.terminal_chess;
 
-import no.dervis.terminal_games.terminal_chess.ai.alphabeta.*;
+import no.dervis.terminal_games.terminal_chess.ai.alphabeta.BookEngine;
+import no.dervis.terminal_games.terminal_chess.ai.alphabeta.ChessAI;
+import no.dervis.terminal_games.terminal_chess.ai.alphabeta.Engine;
+import no.dervis.terminal_games.terminal_chess.ai.alphabeta.ParallelChessAI;
 import no.dervis.terminal_games.terminal_chess.board.Bitboard;
 import no.dervis.terminal_games.terminal_chess.board.Board.Tuple2;
 import no.dervis.terminal_games.terminal_chess.board.Board.Tuple3;
@@ -435,8 +438,7 @@ public class TerminalChess implements BoardPrinter {
 
     enum EngineType {
         SINGLE("Single-threaded", ChessAI::new),
-        PARALLEL("Parallel (Lazy SMP)", ParallelChessAI::new),
-        IMPROVED_PARALLEL("Improved Parallel (Lazy SMP)", ImprovedParallelChessAI::new);
+        PARALLEL("Parallel (Lazy SMP)", ParallelChessAI::new);
 
         final String label;
         private final Supplier<Engine> factory;

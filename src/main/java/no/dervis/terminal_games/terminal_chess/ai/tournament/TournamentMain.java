@@ -1,6 +1,9 @@
 package no.dervis.terminal_games.terminal_chess.ai.tournament;
 
-import no.dervis.terminal_games.terminal_chess.ai.alphabeta.*;
+import no.dervis.terminal_games.terminal_chess.ai.alphabeta.BookEngine;
+import no.dervis.terminal_games.terminal_chess.ai.alphabeta.ChessAI;
+import no.dervis.terminal_games.terminal_chess.ai.alphabeta.Engine;
+import no.dervis.terminal_games.terminal_chess.ai.alphabeta.ParallelChessAI;
 
 import java.nio.file.Path;
 
@@ -10,8 +13,7 @@ import java.nio.file.Path;
  * <p>Usage: {@code java TournamentMain [rounds] [thinkTimeMs] [matchup] [book]}
  * <ul>
  *   <li>{@code matchup=1} — Single vs Parallel (default)</li>
- *   <li>{@code matchup=2} — Parallel vs ImprovedParallel</li>
- *   <li>{@code matchup=3} — Single vs ImprovedParallel</li>
+ *   <li>{@code matchup=2} — Single vs Parallel</li>
  *   <li>{@code book=true|false} — use opening book (default: true)</li>
  * </ul>
  */
@@ -30,12 +32,8 @@ public class TournamentMain {
 
         switch (matchup) {
             case 2 -> {
-                e1 = new EngineConfig("Parallel", maybeWithBook(new ParallelChessAI(verbose), useBook), thinkTimeMs);
-                e2 = new EngineConfig("ImprovedParallel", maybeWithBook(new ImprovedParallelChessAI(verbose), useBook), thinkTimeMs);
-            }
-            case 3 -> {
                 e1 = new EngineConfig("Single", maybeWithBook(new ChessAI(verbose), useBook), thinkTimeMs);
-                e2 = new EngineConfig("ImprovedParallel", maybeWithBook(new ImprovedParallelChessAI(verbose), useBook), thinkTimeMs);
+                e2 = new EngineConfig("Parallel", maybeWithBook(new ParallelChessAI(verbose), useBook), thinkTimeMs);
             }
             default -> {
                 e1 = new EngineConfig("Single", maybeWithBook(new ChessAI(verbose), useBook), thinkTimeMs);
