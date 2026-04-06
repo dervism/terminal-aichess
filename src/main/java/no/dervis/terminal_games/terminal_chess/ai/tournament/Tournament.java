@@ -29,7 +29,7 @@ import java.util.List;
  */
 public class Tournament implements Chess {
 
-    private static final int MAX_MOVES_PER_GAME = 500;
+    private static final int MAX_MOVES_PER_GAME = 300;
     private static final DateTimeFormatter FILE_FMT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
     private static final DateTimeFormatter DISPLAY_FMT =
@@ -77,6 +77,7 @@ public class Tournament implements Chess {
 
             if (verbose) {
                 System.out.printf("  Result: %s (%d moves)%n", result.result(), result.totalMoves());
+                System.out.println(Chess.boardToStr.apply(Bitboard.fromFEN(result.finalFEN()), true));
             }
         }
 

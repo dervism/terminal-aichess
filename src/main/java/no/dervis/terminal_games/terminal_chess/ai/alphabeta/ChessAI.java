@@ -162,9 +162,11 @@ public class ChessAI implements Chess, Engine {
             if (Math.abs(score) > MATE_THRESHOLD) break;
         }
 
-        long elapsed = System.currentTimeMillis() - startTime;
-        System.out.printf("%n[SingleAI] info depth %d total nodes %,d time %dms%n",
+        if (verbose) {
+            long elapsed = System.currentTimeMillis() - startTime;
+            System.out.printf("%n[SingleAI] info depth %d total nodes %,d time %dms%n",
                 completedDepth, nodesSearched, elapsed);
+        }
 
         return bestMoveRoot;
     }

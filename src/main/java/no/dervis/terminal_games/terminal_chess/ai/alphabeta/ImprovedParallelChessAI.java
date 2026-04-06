@@ -6,33 +6,25 @@ import no.dervis.terminal_games.terminal_chess.moves.Move;
 import no.dervis.terminal_games.terminal_chess.moves.generator.Generator;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
 /**
- * Parallel chess AI using Lazy SMP (Symmetric MultiProcessing).
+ * Improved parallel chess AI using Lazy SMP with better thread utilisation.
  *
- * <p>Multiple threads search the same position simultaneously, sharing a
- * transposition table. Each thread runs its own iterative deepening with
- * independent killer/history tables. The shared TT lets discoveries by
- * one thread speed up all others — deeper TT entries cut off branches
- * that other threads would otherwise have to search.</p>
- *
- * <h3>Search features</h3>
+ * <p>Improvements over {@link ParallelChessAI}:</p>
  * <ul>
- *   <li>Lazy SMP with configurable thread count</li>
- *   <li>Iterative deepening with depth diversity across threads</li>
- *   <li>Negamax alpha-beta pruning</li>
- *   <li>Principal Variation Search (PVS)</li>
- *   <li>Quiescence search (captures + check evasions)</li>
- *   <li>Shared transposition table with Zobrist hashing</li>
- *   <li>Check extensions</li>
- *   <li>Late Move Reductions (LMR)</li>
- *   <li>Move ordering: TT move, MVV-LVA captures, killer moves, history heuristic</li>
- *   <li>Configurable time management</li>
+ *   <li><b>Depth diversity</b> — threads start at staggered depths (1, 2, 3, 1, 2, 3, ...)
+ *       so they explore different parts of the search tree sooner.</li>
+ *   <li><b>Root move shuffling</b> — helper threads shuffle their root move list so
+ *       different threads prioritise different candidate moves, reducing redundant work.</li>
+ *   <li><b>Independent time management</b> — each thread independently decides when to stop
+ *       starting new depth iterations, rather than thread 0 killing everyone via the shared
+ *       stop flag. The hard time limit still stops all threads.</li>
  * </ul>
  */
-public class ParallelChessAI implements Chess, Engine {
+public class ImprovedParallelChessAI implements Chess, Engine {
 
     // ===== Constants =====
     private static final int MAX_PLY = 128;
@@ -46,14 +38,13 @@ public class ParallelChessAI implements Chess, Engine {
     private static final byte TT_BETA = 2;
 
     // Move ordering score thresholds
-    private static final int TT_MOVE_SCORE = 10_000_000;
-    private static final int CAPTURE_BASE = 1_000_000;
-    private static final int KILLER_SCORE_0 = 900_000;
-    private static final int KILLER_SCORE_1 = 800_000;
+    private static final int TT_MOVE_SCORE    = 10_000_000;
+    private static final int CAPTURE_BASE     =  1_000_000;
+    private static final int KILLER_SCORE_0   =    900_000;
+    private static final int KILLER_SCORE_1   =    800_000;
 
     // MVV-LVA table
     private static final int[][] MVV_LVA = new int[6][6];
-
     static {
         int[] values = {1, 3, 3, 5, 9, 10};
         for (int victim = 0; victim < 6; victim++)
@@ -61,15 +52,20 @@ public class ParallelChessAI implements Chess, Engine {
                 MVV_LVA[victim][attacker] = values[victim] * 10 - values[attacker];
     }
 
+    // Depth diversity table: maps threadId to a starting depth offset.
+    // Threads cycle through offsets 0, 1, 2 so they begin searching at
+    // different depths, reducing redundant work in the shared TT.
+    private static final int[] DEPTH_OFFSETS = {0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0};
+
     // ===== Shared Transposition Table =====
     private static final int TT_SIZE = 1 << 20;
     private static final int TT_MASK = TT_SIZE - 1;
 
-    private final long[] ttKey = new long[TT_SIZE];
-    private final int[] ttMove = new int[TT_SIZE];
+    private final long[]  ttKey   = new long[TT_SIZE];
+    private final int[]   ttMove  = new int[TT_SIZE];
     private final short[] ttScore = new short[TT_SIZE];
-    private final byte[] ttDepth = new byte[TT_SIZE];
-    private final byte[] ttFlag = new byte[TT_SIZE];
+    private final byte[]  ttDepth = new byte[TT_SIZE];
+    private final byte[]  ttFlag  = new byte[TT_SIZE];
 
     // ===== Zobrist Hashing (static, read-only) =====
     private static final long[][] ZOBRIST_PIECE = new long[12][64];
@@ -98,20 +94,19 @@ public class ParallelChessAI implements Chess, Engine {
 
     // ===== Constructors =====
 
-    public ParallelChessAI() {
+    public ImprovedParallelChessAI() {
         this(Runtime.getRuntime().availableProcessors(), true);
     }
 
-    public ParallelChessAI(boolean verbose) {
+    public ImprovedParallelChessAI(boolean verbose) {
         this(Runtime.getRuntime().availableProcessors(), verbose);
     }
 
-    public ParallelChessAI(int numThreads) {
-        this.numThreads = Math.max(1, numThreads);
-        this.verbose = true;
+    public ImprovedParallelChessAI(int numThreads) {
+        this(numThreads, true);
     }
 
-    public ParallelChessAI(int numThreads, boolean verbose) {
+    public ImprovedParallelChessAI(int numThreads, boolean verbose) {
         this.numThreads = Math.max(1, numThreads);
         this.verbose = verbose;
     }
@@ -135,19 +130,20 @@ public class ParallelChessAI implements Chess, Engine {
         Thread[] threads = new Thread[numThreads];
 
         for (int i = 0; i < numThreads; i++) {
-            workers[i] = new SearchWorker(board.copy(), new ArrayList<>(rootMoves), i);
-            threads[i] = new Thread(workers[i], "smp-" + i);
+            // Each helper thread gets a shuffled copy of root moves
+            List<Integer> threadMoves = new ArrayList<>(rootMoves);
+            if (i > 0) {
+                Collections.shuffle(threadMoves, new Random(i * 7919L));
+            }
+            workers[i] = new SearchWorker(board.copy(), threadMoves, i);
+            threads[i] = new Thread(workers[i], "ismp-" + i);
             threads[i].setDaemon(true);
         }
 
         for (Thread t : threads) t.start();
 
         for (Thread t : threads) {
-            try {
-                t.join();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
+            try { t.join(); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
         }
 
         // Collect result: prefer the worker that completed the deepest search
@@ -159,7 +155,7 @@ public class ParallelChessAI implements Chess, Engine {
         for (SearchWorker w : workers) {
             totalNodes += w.nodesSearched;
             if (w.completedDepth > bestDepth ||
-                    (w.completedDepth == bestDepth && w.bestScore > bestScore)) {
+                (w.completedDepth == bestDepth && w.bestScore > bestScore)) {
                 bestDepth = w.completedDepth;
                 bestScore = w.bestScore;
                 bestMove = w.bestMove;
@@ -168,8 +164,8 @@ public class ParallelChessAI implements Chess, Engine {
 
         if (verbose) {
             long elapsed = System.currentTimeMillis() - startTime;
-            System.out.printf("[ParallelAI] info threads %d total nodes %,d time %dms%n",
-                    numThreads, totalNodes, elapsed);
+            System.out.printf("[ImprovedParallelAI] info threads %d depth %d total nodes %,d time %dms%n",
+                numThreads, bestDepth, totalNodes, elapsed);
         }
 
         return bestMove;
@@ -281,9 +277,10 @@ public class ParallelChessAI implements Chess, Engine {
             int color = board.turn();
             bestMove = rootMoves.getFirst();
 
-            // Depth diversity: helper threads skip depth 1 so they quickly
-            // reach deeper positions while thread 0 fills the TT with shallow results
-            int startDepth = (threadId == 0) ? 1 : 2;
+            // Depth diversity: threads start at staggered depths so they
+            // populate the shared TT with entries from different depth levels.
+            int offset = DEPTH_OFFSETS[threadId % DEPTH_OFFSETS.length];
+            int startDepth = 1 + offset;
 
             for (int depth = startDepth; depth <= MAX_PLY; depth++) {
                 int score = searchRoot(depth, color);
@@ -293,27 +290,27 @@ public class ParallelChessAI implements Chess, Engine {
                 bestScore = score;
                 completedDepth = depth;
 
-                // Only thread 0 prints progress and manages time
-                if (threadId == 0) {
+                // Only thread 0 prints progress
+                if (threadId == 0 && verbose) {
                     long elapsed = System.currentTimeMillis() - startTime;
                     long totalNodes = 0;
                     for (SearchWorker w : workers) totalNodes += w.nodesSearched;
                     long nps = elapsed > 0 ? (totalNodes * 1000) / elapsed : 0;
 
                     String scoreStr = isMateScore(score)
-                            ? "mate " + mateInMoves(score)
-                            : "cp " + score;
+                        ? "mate " + mateInMoves(score)
+                        : "cp " + score;
                     String pvLine = extractPV(board, depth);
-                    System.out.printf("\r[ParallelAI] info depth %d score %s nodes %d nps %d time %dms pv %s          ",
+                    System.out.printf("\r[ImprovedParallelAI] info depth %d score %s nodes %d nps %d time %dms pv %s          ",
                             depth, scoreStr, totalNodes, nps, elapsed, pvLine);
                     System.out.flush();
-
-                    // Don't start a new depth if more than half the time is used
-                    if (elapsed > timeLimitMs / 2) {
-                        stopped = true;
-                        break;
-                    }
                 }
+
+                // Each thread independently decides whether to start a new depth.
+                // This prevents thread 0 from killing a helper that is about to
+                // complete a deeper search.
+                long elapsed = System.currentTimeMillis() - startTime;
+                if (elapsed > timeLimitMs / 2) break;
 
                 if (Math.abs(score) > MATE_THRESHOLD) break;
             }
@@ -327,6 +324,9 @@ public class ParallelChessAI implements Chess, Engine {
             long hash = computeHash(board);
             int ttBestMove = probeTTMove(hash);
 
+            // Thread 0 uses TT-informed move ordering.
+            // Helper threads already have shuffled root moves; they still
+            // benefit from TT/killer/history scoring within the shuffle.
             int[] scores = scoreMoves(rootMoves, board, ttBestMove, 0, color);
             sortMoves(rootMoves, scores);
 
@@ -408,7 +408,7 @@ public class ParallelChessAI implements Chess, Engine {
             int[] moveScores = scoreMoves(moves, board, ttHitMove, ply, color);
             sortMoves(moves, moveScores);
 
-            int bestScore = -INFINITY;
+            int bestScoreLocal = -INFINITY;
             int bestMoveLocal = moves.getFirst();
             byte flag = TT_ALPHA;
 
@@ -447,8 +447,8 @@ public class ParallelChessAI implements Chess, Engine {
 
                 if (stopped) return 0;
 
-                if (score > bestScore) {
-                    bestScore = score;
+                if (score > bestScoreLocal) {
+                    bestScoreLocal = score;
                     bestMoveLocal = move;
 
                     if (score > alpha) {
@@ -469,8 +469,8 @@ public class ParallelChessAI implements Chess, Engine {
                 }
             }
 
-            storeTT(hash, depth, bestScore, flag, bestMoveLocal);
-            return bestScore;
+            storeTT(hash, depth, bestScoreLocal, flag, bestMoveLocal);
+            return bestScoreLocal;
         }
 
         // ----- Quiescence -----
@@ -550,14 +550,8 @@ public class ParallelChessAI implements Chess, Engine {
                     }
 
                     if (ply < MAX_PLY) {
-                        if (move == killers[ply][0]) {
-                            scores[i] = KILLER_SCORE_0;
-                            continue;
-                        }
-                        if (move == killers[ply][1]) {
-                            scores[i] = KILLER_SCORE_1;
-                            continue;
-                        }
+                        if (move == killers[ply][0]) { scores[i] = KILLER_SCORE_0; continue; }
+                        if (move == killers[ply][1]) { scores[i] = KILLER_SCORE_1; continue; }
                     }
 
                     int from = move >>> 14;
