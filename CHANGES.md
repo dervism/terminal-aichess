@@ -68,3 +68,70 @@ Applied identically to both `ChessAI` (single-threaded) and `ParallelChessAI` (L
 ### Move Ordering (updated)
 
 Priority order: TT move (10M) > winning/equal SEE captures (1M+) > killer 0 (900K) > killer 1 (800K) > countermove (700K) > history heuristic > losing captures (negative SEE)
+
+## Evaluation Improvements (2026-04-06)
+
+Applied to `Evaluation.java` — used by both engines.
+
+### New Infrastructure
+- Rank masks: `RANK_1` through `RANK_8`, `RANKS[]` array
+- Center files mask: `CENTER_FILES` (C-F files)
+- `chebyshevDistance(sq1, sq2)` helper for king-pawn proximity
+- Imports: `PawnAttacks`, `KingAttacks`
+
+### New Features
+
+#### Connected Rooks (MG+EG)
+Two rooks seeing each other along a rank or file (no pieces between), checked via `MagicBitboard.rookAttacks()`.
+- Bonus: +15 MG, +10 EG
+
+#### Knight Outposts (MG+EG)
+Knight in enemy half with no enemy pawn on adjacent files at same or more advanced ranks. Extra bonus if defended by own pawn and if on center files (C-F).
+- Unsupported: +20 MG (+3 center), +10 EG
+- Supported: +30 MG (+5 center), +15 EG
+
+#### King Danger Zone (MG only)
+Count enemy pieces attacking the king zone (king square + 8 adjacent squares). Each piece type has an attack weight (N=2, B=2, R=3, Q=5). Quadratic penalty: `weight^2 / 4`, capped at 500. Requires >= 2 attackers.
+- Penalty: 0 to -500 cp
+
+#### Space Advantage (MG only)
+Count safe squares in center files (C-F) on own side of board (ranks 2-4 for white, 5-7 for black), excluding squares attacked by enemy pawns. Optimized bitwise pawn attack computation.
+- Bonus: +2 cp per safe square
+
+#### Pawn Storms (MG only)
+When kings are castled on opposite sides (>= 4 files apart), bonus for own pawns advanced on the 3 files around the enemy king.
+- Bonus by rank advancement: 0/0/0/+10/+25/+50/0
+
+#### Rook on 7th Rank (MG+EG)
+Rook on the penultimate rank when enemy king is on back rank or enemy pawns are on that rank.
+- Bonus: +25 MG, +35 EG (per rook)
+
+#### Backward Pawns (MG+EG)
+Added inside `evaluatePawnStructure`. A pawn whose stop square is attacked by an enemy pawn and no friendly pawn on adjacent files at same or lower rank can support it.
+- Penalty: -10 MG, -15 EG
+
+#### King-Pawn Proximity (EG only)
+For each passed pawn, bonus for own king proximity minus penalty for enemy king proximity. Uses Chebyshev distance.
+- Bonus: +5 EG per rank of closeness (own king) / -5 EG per rank (enemy king)
+
+#### Minor Piece Imbalance (MG+EG)
+Knights benefit from more pawns (closed positions), bishops from fewer pawns (open). Adjustment per piece based on total pawn count minus 8.
+- Knight: +3 MG / +2 EG per pawn above 8 per knight
+- Bishop: -3 MG / -2 EG per pawn above 8 per bishop
+
+### Evaluation Order in evaluate()
+1. Material + PST
+2. Bishop pair
+3. Minor piece imbalance
+4. Pawn structure (doubled, isolated, passed, backward)
+5. Rook on open/semi-open files
+6. Connected rooks
+7. Rook on 7th rank
+8. Knight outposts
+9. King safety (pawn shield, MG)
+10. King danger zone (MG)
+11. Pawn storms (MG)
+12. Mobility
+13. Space advantage (MG)
+14. King-pawn proximity (EG)
+15. MG/EG interpolation + tempo

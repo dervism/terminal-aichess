@@ -4,7 +4,9 @@ import no.dervis.terminal_games.terminal_chess.board.Bitboard;
 import no.dervis.terminal_games.terminal_chess.board.Board;
 import no.dervis.terminal_games.terminal_chess.board.Chess;
 import no.dervis.terminal_games.terminal_chess.board.MagicBitboard;
+import no.dervis.terminal_games.terminal_chess.moves.attacks.KingAttacks;
 import no.dervis.terminal_games.terminal_chess.moves.attacks.KnightAttacks;
+import no.dervis.terminal_games.terminal_chess.moves.attacks.PawnAttacks;
 
 /**
  * Static board evaluation function for the chess AI.
@@ -13,11 +15,18 @@ import no.dervis.terminal_games.terminal_chess.moves.attacks.KnightAttacks;
  * <ul>
  *   <li>Material balance</li>
  *   <li>Piece-square tables (middlegame/endgame with game-phase interpolation)</li>
- *   <li>Pawn structure (doubled, isolated, passed pawns)</li>
  *   <li>Bishop pair bonus</li>
+ *   <li>Minor piece imbalance (knights prefer closed, bishops prefer open)</li>
+ *   <li>Pawn structure (doubled, isolated, passed, backward pawns)</li>
  *   <li>Rook on open/semi-open files</li>
- *   <li>King safety (pawn shield)</li>
+ *   <li>Connected rooks</li>
+ *   <li>Rook on 7th rank</li>
+ *   <li>Knight outposts</li>
+ *   <li>King safety (pawn shield + king danger zone)</li>
+ *   <li>Pawn storms (opposite-side castling)</li>
  *   <li>Piece mobility</li>
+ *   <li>Space advantage</li>
+ *   <li>King-pawn proximity (endgame)</li>
  *   <li>Tempo bonus</li>
  * </ul>
  *
@@ -35,7 +44,7 @@ public class Evaluation implements Chess, Board {
     private static final int PHASE_BISHOP = 1;
     private static final int PHASE_ROOK = 2;
     private static final int PHASE_QUEEN = 4;
-    private static final int TOTAL_PHASE = 24; // 2*(1+1+2+4) per side = 16, but standard is 24
+    private static final int TOTAL_PHASE = 24;
 
     // ----- Evaluation bonuses / penalties -----
     private static final int BISHOP_PAIR_BONUS_MG = 45;
@@ -47,20 +56,61 @@ public class Evaluation implements Chess, Board {
     private static final int ROOK_SEMI_OPEN_FILE_BONUS = 12;
     private static final int TEMPO_BONUS = 15;
 
-    // Passed pawn bonus by rank (from the pawn's perspective)
-    // Index = number of ranks advanced from starting position (0-6)
+    // Passed pawn bonus by rank advancement (0-7)
     private static final int[] PASSED_PAWN_BONUS_MG = {0,  5, 10, 20, 35, 60, 100, 0};
     private static final int[] PASSED_PAWN_BONUS_EG = {0, 10, 20, 40, 70, 120, 200, 0};
 
     // Mobility weights per square (centipawns per available square)
-    private static final int[] MOBILITY_MG = {0, 4, 3, 2, 1, 0}; // pawn, knight, bishop, rook, queen, king
+    private static final int[] MOBILITY_MG = {0, 4, 3, 2, 1, 0};
     private static final int[] MOBILITY_EG = {0, 2, 3, 3, 2, 0};
 
-    // King safety: pawn shield bonus per pawn on 2nd/3rd rank near king
+    // King safety: pawn shield bonus per pawn near king
     private static final int PAWN_SHIELD_BONUS = 15;
     private static final int PAWN_SHIELD_BONUS_3RD = 8;
 
-    // ----- Adjacent file masks for pawn structure -----
+    // --- New evaluation constants ---
+
+    // Connected rooks
+    private static final int CONNECTED_ROOKS_BONUS_MG = 15;
+    private static final int CONNECTED_ROOKS_BONUS_EG = 10;
+
+    // Knight outposts
+    private static final int KNIGHT_OUTPOST_UNSUPPORTED_MG = 20;
+    private static final int KNIGHT_OUTPOST_UNSUPPORTED_EG = 10;
+    private static final int KNIGHT_OUTPOST_SUPPORTED_MG = 30;
+    private static final int KNIGHT_OUTPOST_SUPPORTED_EG = 15;
+    private static final int KNIGHT_OUTPOST_CENTER_BONUS_UNSUPPORTED = 3;
+    private static final int KNIGHT_OUTPOST_CENTER_BONUS_SUPPORTED = 5;
+
+    // King danger zone
+    private static final int[] KING_DANGER_ATTACK_WEIGHT = {0, 2, 2, 3, 5, 0}; // N, B, R, Q indexed by piece type
+    private static final int KING_DANGER_MAX = 500;
+
+    // Space advantage
+    private static final int SPACE_BONUS_PER_SQUARE = 2;
+
+    // Pawn storms (bonus by rank advancement: index = rank 0-7)
+    private static final int[] PAWN_STORM_BONUS = {0, 0, 0, 10, 25, 50, 0, 0};
+
+    // Rook on 7th rank
+    private static final int ROOK_7TH_BONUS_MG = 25;
+    private static final int ROOK_7TH_BONUS_EG = 35;
+
+    // Backward pawns
+    private static final int BACKWARD_PAWN_PENALTY_MG = -10;
+    private static final int BACKWARD_PAWN_PENALTY_EG = -15;
+
+    // King-pawn proximity (endgame)
+    private static final int KING_PAWN_PROXIMITY_BONUS = 5;
+
+    // Minor piece imbalance
+    private static final int KNIGHT_PAWN_ADJ_MG = 3;
+    private static final int KNIGHT_PAWN_ADJ_EG = 2;
+    private static final int BISHOP_PAWN_ADJ_MG = -3;
+    private static final int BISHOP_PAWN_ADJ_EG = -2;
+
+    // ----- Masks -----
+
     private static final long[] ADJACENT_FILES = {
         FILE_B,              // file A
         FILE_A | FILE_C,     // file B
@@ -76,20 +126,35 @@ public class Evaluation implements Chess, Board {
         FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H
     };
 
+    private static final long RANK_1 = 0xFFL;
+    private static final long RANK_2 = 0xFF00L;
+    private static final long RANK_3 = 0xFF0000L;
+    private static final long RANK_4 = 0xFF000000L;
+    private static final long RANK_5 = 0xFF00000000L;
+    private static final long RANK_6 = 0xFF0000000000L;
+    private static final long RANK_7 = 0xFF000000000000L;
+    private static final long RANK_8 = 0xFF00000000000000L;
+
+    private static final long[] RANKS = {
+        RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8
+    };
+
+    // Center files C-F for space evaluation
+    private static final long CENTER_FILES = FILE_C | FILE_D | FILE_E | FILE_F;
+
     // ----- Piece-Square Tables -----
     // All from white's perspective: index 0 = a1 (rank 1), index 63 = h8 (rank 8)
     // For black: access via pst[sq ^ 56] (mirror rank)
 
-    // Pawn middlegame PST
     private static final int[] PAWN_MG = {
-         0,  0,  0,  0,  0,  0,  0,  0, // rank 1 (no pawns here)
-         5, 10, 10,-20,-20, 10, 10,  5, // rank 2
-         5, -5,-10,  0,  0,-10, -5,  5, // rank 3
-         0,  0,  0, 20, 20,  0,  0,  0, // rank 4
-         5,  5, 10, 25, 25, 10,  5,  5, // rank 5
-        10, 10, 20, 30, 30, 20, 10, 10, // rank 6
-        50, 50, 50, 50, 50, 50, 50, 50, // rank 7 (about to promote)
-         0,  0,  0,  0,  0,  0,  0,  0  // rank 8
+         0,  0,  0,  0,  0,  0,  0,  0,
+         5, 10, 10,-20,-20, 10, 10,  5,
+         5, -5,-10,  0,  0,-10, -5,  5,
+         0,  0,  0, 20, 20,  0,  0,  0,
+         5,  5, 10, 25, 25, 10,  5,  5,
+        10, 10, 20, 30, 30, 20, 10, 10,
+        50, 50, 50, 50, 50, 50, 50, 50,
+         0,  0,  0,  0,  0,  0,  0,  0
     };
 
     private static final int[] PAWN_EG = {
@@ -103,7 +168,6 @@ public class Evaluation implements Chess, Board {
          0,  0,  0,  0,  0,  0,  0,  0
     };
 
-    // Knight PST
     private static final int[] KNIGHT_MG = {
         -50,-40,-30,-30,-30,-30,-40,-50,
         -40,-20,  0,  0,  0,  0,-20,-40,
@@ -126,7 +190,6 @@ public class Evaluation implements Chess, Board {
         -50,-40,-30,-30,-30,-30,-40,-50
     };
 
-    // Bishop PST
     private static final int[] BISHOP_MG = {
         -20,-10,-10,-10,-10,-10,-10,-20,
         -10,  0,  0,  0,  0,  0,  0,-10,
@@ -149,7 +212,6 @@ public class Evaluation implements Chess, Board {
         -20,-10,-10,-10,-10,-10,-10,-20
     };
 
-    // Rook PST
     private static final int[] ROOK_MG = {
          0,  0,  0,  5,  5,  0,  0,  0,
         -5,  0,  0,  0,  0,  0,  0, -5,
@@ -172,7 +234,6 @@ public class Evaluation implements Chess, Board {
          0,  0,  0,  0,  0,  0,  0,  0
     };
 
-    // Queen PST
     private static final int[] QUEEN_MG = {
         -20,-10,-10, -5, -5,-10,-10,-20,
         -10,  0,  0,  0,  0,  0,  0,-10,
@@ -195,7 +256,6 @@ public class Evaluation implements Chess, Board {
         -20,-10,-10, -5, -5,-10,-10,-20
     };
 
-    // King middlegame: favor castled position, stay safe
     private static final int[] KING_MG = {
          20, 30, 10,  0,  0, 10, 30, 20,
          20, 20,  0,  0,  0,  0, 20, 20,
@@ -207,7 +267,6 @@ public class Evaluation implements Chess, Board {
         -30,-40,-40,-50,-50,-40,-40,-30
     };
 
-    // King endgame: centralize
     private static final int[] KING_EG = {
         -50,-30,-30,-30,-30,-30,-30,-50,
         -30,-30,  0,  0,  0,  0,-30,-30,
@@ -219,7 +278,6 @@ public class Evaluation implements Chess, Board {
         -50,-40,-30,-20,-20,-30,-40,-50
     };
 
-    // Indexed by piece type: pawn=0, knight=1, bishop=2, rook=3, queen=4, king=5
     private static final int[][] MG_PST = {PAWN_MG, KNIGHT_MG, BISHOP_MG, ROOK_MG, QUEEN_MG, KING_MG};
     private static final int[][] EG_PST = {PAWN_EG, KNIGHT_EG, BISHOP_EG, ROOK_EG, QUEEN_EG, KING_EG};
 
@@ -236,11 +294,13 @@ public class Evaluation implements Chess, Board {
         long allPieces = board.allPieces();
         long whitePieces = board.allWhitePieces();
         long blackPieces = board.allBlackPieces();
+        long wPawns = board.getPawns(white);
+        long bPawns = board.getPawns(black);
 
         // Game phase
         int phase = computePhase(board);
 
-        // Material + PST
+        // 1. Material + PST
         for (int pt = 0; pt < 6; pt++) {
             long wBB = getPieceBB(board, pt, white);
             while (wBB != 0) {
@@ -252,13 +312,13 @@ public class Evaluation implements Chess, Board {
             long bBB = getPieceBB(board, pt, black);
             while (bBB != 0) {
                 int sq = Long.numberOfTrailingZeros(bBB);
-                mgBlack += MG_PIECE_VALUE[pt] + MG_PST[pt][sq ^ 56]; // mirror rank
+                mgBlack += MG_PIECE_VALUE[pt] + MG_PST[pt][sq ^ 56];
                 egBlack += EG_PIECE_VALUE[pt] + EG_PST[pt][sq ^ 56];
                 bBB &= bBB - 1;
             }
         }
 
-        // Bishop pair
+        // 2. Bishop pair
         if (Long.bitCount(board.getBishops(white)) >= 2) {
             mgWhite += BISHOP_PAIR_BONUS_MG;
             egWhite += BISHOP_PAIR_BONUS_EG;
@@ -268,32 +328,84 @@ public class Evaluation implements Chess, Board {
             egBlack += BISHOP_PAIR_BONUS_EG;
         }
 
-        // Pawn structure
-        long wPawns = board.getPawns(white);
-        long bPawns = board.getPawns(black);
+        // 3. Minor piece imbalance
+        int totalPawns = Long.bitCount(wPawns | bPawns);
+        int pawnDelta = totalPawns - 8;
 
+        int wKnightCount = Long.bitCount(board.getKnights(white));
+        int wBishopCount = Long.bitCount(board.getBishops(white));
+        mgWhite += wKnightCount * pawnDelta * KNIGHT_PAWN_ADJ_MG;
+        egWhite += wKnightCount * pawnDelta * KNIGHT_PAWN_ADJ_EG;
+        mgWhite += wBishopCount * pawnDelta * BISHOP_PAWN_ADJ_MG;
+        egWhite += wBishopCount * pawnDelta * BISHOP_PAWN_ADJ_EG;
+
+        int bKnightCount = Long.bitCount(board.getKnights(black));
+        int bBishopCount = Long.bitCount(board.getBishops(black));
+        mgBlack += bKnightCount * pawnDelta * KNIGHT_PAWN_ADJ_MG;
+        egBlack += bKnightCount * pawnDelta * KNIGHT_PAWN_ADJ_EG;
+        mgBlack += bBishopCount * pawnDelta * BISHOP_PAWN_ADJ_MG;
+        egBlack += bBishopCount * pawnDelta * BISHOP_PAWN_ADJ_EG;
+
+        // 4. Pawn structure (includes backward pawns)
         int[] wPawnStructure = evaluatePawnStructure(wPawns, bPawns, white);
         int[] bPawnStructure = evaluatePawnStructure(bPawns, wPawns, black);
         mgWhite += wPawnStructure[0]; egWhite += wPawnStructure[1];
         mgBlack += bPawnStructure[0]; egBlack += bPawnStructure[1];
 
-        // Rook on open/semi-open files
+        // 5. Rook on open/semi-open files
         int[] wRookFiles = evaluateRookFiles(board.getRooks(white), wPawns, bPawns);
         int[] bRookFiles = evaluateRookFiles(board.getRooks(black), bPawns, wPawns);
         mgWhite += wRookFiles[0]; egWhite += wRookFiles[1];
         mgBlack += bRookFiles[0]; egBlack += bRookFiles[1];
 
-        // King safety (pawn shield) — only relevant in middlegame
-        int wKingSafety = evaluateKingSafety(board, white, wPawns);
-        int bKingSafety = evaluateKingSafety(board, black, bPawns);
-        mgWhite += wKingSafety;
-        mgBlack += bKingSafety;
+        // 6. Connected rooks
+        int[] wConnRooks = evaluateConnectedRooks(board.getRooks(white), allPieces);
+        int[] bConnRooks = evaluateConnectedRooks(board.getRooks(black), allPieces);
+        mgWhite += wConnRooks[0]; egWhite += wConnRooks[1];
+        mgBlack += bConnRooks[0]; egBlack += bConnRooks[1];
 
-        // Mobility
+        // 7. Rook on 7th rank
+        int wKingSq = Long.numberOfTrailingZeros(board.kingPiece(white));
+        int bKingSq = Long.numberOfTrailingZeros(board.kingPiece(black));
+
+        int[] wRook7th = evaluateRookOn7th(board.getRooks(white), bKingSq, bPawns, white);
+        int[] bRook7th = evaluateRookOn7th(board.getRooks(black), wKingSq, wPawns, black);
+        mgWhite += wRook7th[0]; egWhite += wRook7th[1];
+        mgBlack += bRook7th[0]; egBlack += bRook7th[1];
+
+        // 8. Knight outposts
+        int[] wOutposts = evaluateKnightOutposts(board.getKnights(white), wPawns, bPawns, white);
+        int[] bOutposts = evaluateKnightOutposts(board.getKnights(black), bPawns, wPawns, black);
+        mgWhite += wOutposts[0]; egWhite += wOutposts[1];
+        mgBlack += bOutposts[0]; egBlack += bOutposts[1];
+
+        // 9. King safety: pawn shield (MG only)
+        mgWhite += evaluateKingSafety(board, white, wPawns);
+        mgBlack += evaluateKingSafety(board, black, bPawns);
+
+        // 10. King danger zone (MG only)
+        mgWhite -= evaluateKingDanger(board, black, wKingSq, whitePieces, allPieces);  // enemy attacks on white king
+        mgBlack -= evaluateKingDanger(board, white, bKingSq, blackPieces, allPieces);  // enemy attacks on black king
+
+        // 11. Pawn storms (MG only)
+        int wKingFile = wKingSq % 8;
+        int bKingFile = bKingSq % 8;
+        mgWhite += evaluatePawnStorms(wPawns, bKingSq, bKingFile, wKingFile, white);
+        mgBlack += evaluatePawnStorms(bPawns, wKingSq, wKingFile, bKingFile, black);
+
+        // 12. Mobility
         int[] wMobility = evaluateMobility(board, white, whitePieces, allPieces);
         int[] bMobility = evaluateMobility(board, black, blackPieces, allPieces);
         mgWhite += wMobility[0]; egWhite += wMobility[1];
         mgBlack += bMobility[0]; egBlack += bMobility[1];
+
+        // 13. Space advantage (MG only)
+        mgWhite += evaluateSpace(wPawns, bPawns, white);
+        mgBlack += evaluateSpace(bPawns, wPawns, black);
+
+        // 14. King-pawn proximity (EG only)
+        egWhite += evaluateKingPawnProximity(wPawns, bPawns, wKingSq, bKingSq, white);
+        egBlack += evaluateKingPawnProximity(bPawns, wPawns, bKingSq, wKingSq, black);
 
         // Interpolate between middlegame and endgame
         int mgScore = mgWhite - mgBlack;
@@ -319,7 +431,7 @@ public class Evaluation implements Chess, Board {
     }
 
     /**
-     * Returns {mgScore, egScore} for pawn structure.
+     * Returns {mgScore, egScore} for pawn structure, including backward pawns.
      */
     private static int[] evaluatePawnStructure(long friendlyPawns, long enemyPawns, int color) {
         int mg = 0, eg = 0;
@@ -330,19 +442,19 @@ public class Evaluation implements Chess, Board {
             int file = sq % 8;
             int rank = sq / 8;
 
-            // Doubled pawns: more than one pawn on this file
+            // Doubled pawns
             if (Long.bitCount(friendlyPawns & FILES[file]) > 1) {
                 mg += DOUBLED_PAWN_PENALTY;
                 eg += DOUBLED_PAWN_PENALTY;
             }
 
-            // Isolated pawns: no friendly pawn on adjacent files
+            // Isolated pawns
             if ((friendlyPawns & ADJACENT_FILES[file]) == 0) {
                 mg += ISOLATED_PAWN_PENALTY_MG;
                 eg += ISOLATED_PAWN_PENALTY_EG;
             }
 
-            // Passed pawns: no enemy pawn can block or capture on path to promotion
+            // Passed pawns
             if (isPassedPawn(sq, file, rank, enemyPawns, color)) {
                 int advancement = (color == white) ? rank - 1 : 6 - rank;
                 if (advancement >= 0 && advancement < PASSED_PAWN_BONUS_MG.length) {
@@ -351,24 +463,59 @@ public class Evaluation implements Chess, Board {
                 }
             }
 
+            // Backward pawns: stop square attacked by enemy pawn and no friendly pawn
+            // on adjacent files at same or lower rank can support it
+            if (isBackwardPawn(sq, file, rank, friendlyPawns, enemyPawns, color)) {
+                mg += BACKWARD_PAWN_PENALTY_MG;
+                eg += BACKWARD_PAWN_PENALTY_EG;
+            }
+
             pawns &= pawns - 1;
         }
         return new int[]{mg, eg};
     }
 
     private static boolean isPassedPawn(int sq, int file, int rank, long enemyPawns, int color) {
-        // Build a mask of files that could block/capture: same file + adjacent files
         long fileMask = FILES[file] | ADJACENT_FILES[file];
-
-        // Only consider ranks ahead of the pawn
         long rankMask = 0L;
         if (color == white) {
-            for (int r = rank + 1; r <= 7; r++) rankMask |= 0xFFL << (r * 8);
+            for (int r = rank + 1; r <= 7; r++) rankMask |= RANKS[r];
         } else {
-            for (int r = rank - 1; r >= 0; r--) rankMask |= 0xFFL << (r * 8);
+            for (int r = rank - 1; r >= 0; r--) rankMask |= RANKS[r];
+        }
+        return (enemyPawns & fileMask & rankMask) == 0;
+    }
+
+    private static boolean isBackwardPawn(int sq, int file, int rank, long friendlyPawns,
+                                          long enemyPawns, int color) {
+        // A backward pawn has no friendly pawn on adjacent files at same or lower rank
+        // AND its stop square is attacked by an enemy pawn
+        long adjFiles = ADJACENT_FILES[file];
+
+        // Check for friendly pawns on adjacent files that are at same rank or behind
+        long supportMask = adjFiles;
+        if (color == white) {
+            // Ranks from rank 1 up to current rank
+            long rankMask = 0L;
+            for (int r = 0; r <= rank; r++) rankMask |= RANKS[r];
+            supportMask &= rankMask;
+        } else {
+            // Ranks from rank 8 down to current rank
+            long rankMask = 0L;
+            for (int r = 7; r >= rank; r--) rankMask |= RANKS[r];
+            supportMask &= rankMask;
         }
 
-        return (enemyPawns & fileMask & rankMask) == 0;
+        if ((friendlyPawns & supportMask) != 0) return false;
+
+        // Check if the stop square is attacked by enemy pawn
+        int stopSquare = (color == white) ? sq + 8 : sq - 8;
+        if (stopSquare < 0 || stopSquare > 63) return false;
+
+        // Enemy pawn attacks on the stop square
+        // A square is attacked by an enemy pawn if an enemy pawn is diagonally behind it
+        long enemyPawnAttacks = PawnAttacks.getAllPawnAttacks(stopSquare, color);
+        return (enemyPawnAttacks & enemyPawns) != 0;
     }
 
     /**
@@ -395,13 +542,103 @@ public class Evaluation implements Chess, Board {
         return new int[]{mg, eg};
     }
 
+    /**
+     * Returns {mgScore, egScore} for connected rooks.
+     * Two rooks seeing each other along a rank or file (no pieces between).
+     */
+    private static int[] evaluateConnectedRooks(long rooks, long allPieces) {
+        if (Long.bitCount(rooks) < 2) return new int[]{0, 0};
+
+        int sq1 = Long.numberOfTrailingZeros(rooks);
+        long remaining = rooks & (rooks - 1);
+        int sq2 = Long.numberOfTrailingZeros(remaining);
+
+        // Check if rook at sq1 can see sq2 via rook attacks
+        long rookAttacksFromSq1 = MagicBitboard.rookAttacks(sq1, allPieces);
+        if ((rookAttacksFromSq1 & (1L << sq2)) != 0) {
+            return new int[]{CONNECTED_ROOKS_BONUS_MG, CONNECTED_ROOKS_BONUS_EG};
+        }
+        return new int[]{0, 0};
+    }
+
+    /**
+     * Returns {mgScore, egScore} for rook on 7th rank.
+     * Bonus when enemy king is on back rank or enemy pawns are on that rank.
+     */
+    private static int[] evaluateRookOn7th(long rooks, int enemyKingSq, long enemyPawns, int color) {
+        int mg = 0, eg = 0;
+        long seventhRank = (color == white) ? RANK_7 : RANK_2;
+        int enemyBackRank = (color == white) ? 7 : 0;
+
+        long rooksOn7th = rooks & seventhRank;
+        if (rooksOn7th == 0) return new int[]{0, 0};
+
+        int enemyKingRank = enemyKingSq / 8;
+        boolean kingOnBackRank = (enemyKingRank == enemyBackRank);
+        boolean pawnsOnRank = (enemyPawns & seventhRank) != 0;
+
+        if (kingOnBackRank || pawnsOnRank) {
+            int count = Long.bitCount(rooksOn7th);
+            mg += count * ROOK_7TH_BONUS_MG;
+            eg += count * ROOK_7TH_BONUS_EG;
+        }
+        return new int[]{mg, eg};
+    }
+
+    /**
+     * Returns {mgScore, egScore} for knight outposts.
+     * Knight in enemy half, no enemy pawn on adjacent files at same or more advanced ranks.
+     */
+    private static int[] evaluateKnightOutposts(long knights, long friendlyPawns, long enemyPawns, int color) {
+        int mg = 0, eg = 0;
+
+        while (knights != 0) {
+            int sq = Long.numberOfTrailingZeros(knights);
+            int rank = sq / 8;
+            int file = sq % 8;
+
+            // Must be in enemy half (rank >= 4 for white, rank <= 3 for black)
+            boolean inEnemyHalf = (color == white) ? rank >= 4 : rank <= 3;
+            if (inEnemyHalf) {
+                // Check no enemy pawn can attack this square from more advanced ranks
+                long adjFiles = ADJACENT_FILES[file];
+                long advancedRanks = 0L;
+                if (color == white) {
+                    for (int r = rank; r <= 7; r++) advancedRanks |= RANKS[r];
+                } else {
+                    for (int r = rank; r >= 0; r--) advancedRanks |= RANKS[r];
+                }
+
+                if ((enemyPawns & adjFiles & advancedRanks) == 0) {
+                    boolean inCenter = (file >= 2 && file <= 5); // C-F files
+                    // Check if supported by own pawn
+                    // A pawn supports the knight if it attacks the knight's square
+                    // PawnAttacks for the enemy color from this square gives squares where
+                    // friendly pawns would need to be to attack this square
+                    long pawnSupportSquares = PawnAttacks.getAllPawnAttacks(sq, 1 - color);
+                    boolean supported = (pawnSupportSquares & friendlyPawns) != 0;
+
+                    if (supported) {
+                        mg += KNIGHT_OUTPOST_SUPPORTED_MG + (inCenter ? KNIGHT_OUTPOST_CENTER_BONUS_SUPPORTED : 0);
+                        eg += KNIGHT_OUTPOST_SUPPORTED_EG;
+                    } else {
+                        mg += KNIGHT_OUTPOST_UNSUPPORTED_MG + (inCenter ? KNIGHT_OUTPOST_CENTER_BONUS_UNSUPPORTED : 0);
+                        eg += KNIGHT_OUTPOST_UNSUPPORTED_EG;
+                    }
+                }
+            }
+
+            knights &= knights - 1;
+        }
+        return new int[]{mg, eg};
+    }
+
     private static int evaluateKingSafety(Bitboard board, int color, long friendlyPawns) {
         int kingSquare = Long.numberOfTrailingZeros(board.kingPiece(color));
         int kingFile = kingSquare % 8;
         int kingRank = kingSquare / 8;
         int score = 0;
 
-        // Check pawn shield on 2nd and 3rd ranks relative to king
         int shieldRank2 = (color == white) ? kingRank + 1 : kingRank - 1;
         int shieldRank3 = (color == white) ? kingRank + 2 : kingRank - 2;
 
@@ -422,13 +659,109 @@ public class Evaluation implements Chess, Board {
     }
 
     /**
+     * Evaluates king danger zone for the defending side.
+     * Returns a penalty (positive value) based on how many enemy pieces attack
+     * the king zone (king square + adjacent squares).
+     *
+     * @param board       the board
+     * @param attackColor the attacking side (enemy of the king we're evaluating)
+     * @param kingSq      the square of the king being attacked
+     * @param friendly    friendly pieces bitboard (of the side being attacked)
+     * @param allPieces   all pieces
+     * @return penalty value (positive = bad for the king's side), 0 if < 2 attackers
+     */
+    private static int evaluateKingDanger(Bitboard board, int attackColor,
+                                          int kingSq, long friendly, long allPieces) {
+        // King zone = king square + all adjacent squares
+        long kingZone = KingAttacks.getAllKingAttacks(kingSq) | (1L << kingSq);
+
+        int attackWeight = 0;
+        int attackerCount = 0;
+
+        // Knights
+        long knights = board.getKnights(attackColor);
+        while (knights != 0) {
+            int sq = Long.numberOfTrailingZeros(knights);
+            if ((KnightAttacks.getAllKnightAttacks(sq) & kingZone) != 0) {
+                attackWeight += KING_DANGER_ATTACK_WEIGHT[knight];
+                attackerCount++;
+            }
+            knights &= knights - 1;
+        }
+
+        // Bishops
+        long bishops = board.getBishops(attackColor);
+        while (bishops != 0) {
+            int sq = Long.numberOfTrailingZeros(bishops);
+            if ((MagicBitboard.bishopAttacks(sq, allPieces) & kingZone) != 0) {
+                attackWeight += KING_DANGER_ATTACK_WEIGHT[bishop];
+                attackerCount++;
+            }
+            bishops &= bishops - 1;
+        }
+
+        // Rooks
+        long rooks = board.getRooks(attackColor);
+        while (rooks != 0) {
+            int sq = Long.numberOfTrailingZeros(rooks);
+            if ((MagicBitboard.rookAttacks(sq, allPieces) & kingZone) != 0) {
+                attackWeight += KING_DANGER_ATTACK_WEIGHT[rook];
+                attackerCount++;
+            }
+            rooks &= rooks - 1;
+        }
+
+        // Queens
+        long queens = board.getQueens(attackColor);
+        while (queens != 0) {
+            int sq = Long.numberOfTrailingZeros(queens);
+            if ((MagicBitboard.queenAttacks(sq, allPieces) & kingZone) != 0) {
+                attackWeight += KING_DANGER_ATTACK_WEIGHT[queen];
+                attackerCount++;
+            }
+            queens &= queens - 1;
+        }
+
+        if (attackerCount < 2) return 0;
+
+        // Quadratic penalty: weight^2 / 4, capped
+        int penalty = Math.min(attackWeight * attackWeight / 4, KING_DANGER_MAX);
+        return penalty;
+    }
+
+    /**
+     * Evaluates pawn storms when kings are castled on opposite sides.
+     * Bonus for own pawns advanced on the 3 files around the enemy king.
+     */
+    private static int evaluatePawnStorms(long friendlyPawns, int enemyKingSq,
+                                          int enemyKingFile, int friendlyKingFile, int color) {
+        // Only when kings are on opposite sides (>= 4 files apart)
+        if (Math.abs(friendlyKingFile - enemyKingFile) < 4) return 0;
+
+        int score = 0;
+        for (int f = Math.max(0, enemyKingFile - 1); f <= Math.min(7, enemyKingFile + 1); f++) {
+            long filePawns = friendlyPawns & FILES[f];
+            while (filePawns != 0) {
+                int sq = Long.numberOfTrailingZeros(filePawns);
+                int rank = sq / 8;
+                // For white, higher rank = more advanced; for black, lower rank = more advanced
+                int advancementRank = (color == white) ? rank : 7 - rank;
+                if (advancementRank >= 0 && advancementRank < PAWN_STORM_BONUS.length) {
+                    score += PAWN_STORM_BONUS[advancementRank];
+                }
+                filePawns &= filePawns - 1;
+            }
+        }
+        return score;
+    }
+
+    /**
      * Returns {mgScore, egScore} for piece mobility.
      */
     private static int[] evaluateMobility(Bitboard board, int color,
                                           long friendly, long allPieces) {
         int mg = 0, eg = 0;
 
-        // Knight mobility
         long knights = board.getKnights(color);
         while (knights != 0) {
             int sq = Long.numberOfTrailingZeros(knights);
@@ -438,7 +771,6 @@ public class Evaluation implements Chess, Board {
             knights &= knights - 1;
         }
 
-        // Bishop mobility
         long bishops = board.getBishops(color);
         while (bishops != 0) {
             int sq = Long.numberOfTrailingZeros(bishops);
@@ -448,7 +780,6 @@ public class Evaluation implements Chess, Board {
             bishops &= bishops - 1;
         }
 
-        // Rook mobility
         long rooks = board.getRooks(color);
         while (rooks != 0) {
             int sq = Long.numberOfTrailingZeros(rooks);
@@ -458,7 +789,6 @@ public class Evaluation implements Chess, Board {
             rooks &= rooks - 1;
         }
 
-        // Queen mobility
         long queens = board.getQueens(color);
         while (queens != 0) {
             int sq = Long.numberOfTrailingZeros(queens);
@@ -469,6 +799,65 @@ public class Evaluation implements Chess, Board {
         }
 
         return new int[]{mg, eg};
+    }
+
+    /**
+     * Evaluates space advantage (MG only).
+     * Count safe squares in center files (C-F) on own side of board,
+     * excluding squares attacked by enemy pawns.
+     */
+    private static int evaluateSpace(long friendlyPawns, long enemyPawns, int color) {
+        // Own side of board: ranks 2-4 for white, ranks 5-7 for black
+        long ownSide;
+        if (color == white) {
+            ownSide = RANK_2 | RANK_3 | RANK_4;
+        } else {
+            ownSide = RANK_5 | RANK_6 | RANK_7;
+        }
+
+        long spaceArea = CENTER_FILES & ownSide;
+
+        // Compute enemy pawn attacks using bitwise shifts (optimized)
+        long enemyPawnAttacks;
+        if (color == white) {
+            // Enemy is black: black pawns attack down-left (>>9) and down-right (>>7)
+            enemyPawnAttacks = ((enemyPawns & ~FILE_A) >>> 9) | ((enemyPawns & ~FILE_H) >>> 7);
+        } else {
+            // Enemy is white: white pawns attack up-left (<<7) and up-right (<<9)
+            enemyPawnAttacks = ((enemyPawns & ~FILE_A) << 7) | ((enemyPawns & ~FILE_H) << 9);
+        }
+
+        long safeSquares = spaceArea & ~enemyPawnAttacks & ~friendlyPawns;
+        return Long.bitCount(safeSquares) * SPACE_BONUS_PER_SQUARE;
+    }
+
+    /**
+     * Evaluates king-pawn proximity for passed pawns (EG only).
+     * Bonus for own king being close to own passed pawns,
+     * penalty for enemy king being close to own passed pawns.
+     */
+    private static int evaluateKingPawnProximity(long friendlyPawns, long enemyPawns,
+                                                 int friendlyKingSq, int enemyKingSq, int color) {
+        int score = 0;
+        long pawns = friendlyPawns;
+
+        while (pawns != 0) {
+            int sq = Long.numberOfTrailingZeros(pawns);
+            int file = sq % 8;
+            int rank = sq / 8;
+
+            if (isPassedPawn(sq, file, rank, enemyPawns, color)) {
+                int friendlyDist = chebyshevDistance(friendlyKingSq, sq);
+                int enemyDist = chebyshevDistance(enemyKingSq, sq);
+                // Bonus for own king close, penalty for enemy king close
+                // Max distance is 7, so (7 - dist) gives closeness score
+                score += (7 - friendlyDist) * KING_PAWN_PROXIMITY_BONUS;
+                score -= (7 - enemyDist) * KING_PAWN_PROXIMITY_BONUS;
+            }
+
+            pawns &= pawns - 1;
+        }
+        return score;
     }
 
     // ========== Helpers ==========
@@ -483,5 +872,11 @@ public class Evaluation implements Chess, Board {
             case king -> board.kingPiece(color);
             default -> 0L;
         };
+    }
+
+    private static int chebyshevDistance(int sq1, int sq2) {
+        int file1 = sq1 % 8, rank1 = sq1 / 8;
+        int file2 = sq2 % 8, rank2 = sq2 / 8;
+        return Math.max(Math.abs(file1 - file2), Math.abs(rank1 - rank2));
     }
 }
