@@ -68,6 +68,9 @@ public class TerminalChess implements BoardPrinter {
         Engine ai = engineType.create();
         if (useBook) ai = new BookEngine(ai);
 
+        clearTerminal();
+        System.out.println(Chess.boardToStr.apply(board, userColor));
+
         String whitePlayer = (userTurn == white) ? "player" : "computer";
         String blackPlayer = (userTurn == black) ? "player" : "computer";
 
@@ -156,15 +159,16 @@ public class TerminalChess implements BoardPrinter {
                     System.out.println("No legal moves available.");
                 } else {
                     Move decoded = Move.createMove(move, board);
+                    moveHistory.add(decoded.toAlgebraic());
+                    String sanPair = formatMovePair(moveHistory);
                     if (ai instanceof BookEngine bookEngine && bookEngine.lastMoveFromBook()) {
-                        System.out.println("Book move: " + decoded.toStringShort());
+                        System.out.println("Book move: " + decoded.toStringShort() + ", " + sanPair);
                     } else {
                         if (ai instanceof BookEngine bookEngine && bookEngine.justLeftBook()) {
                             System.out.println("Opening: " + bookEngine.openingName());
                         }
-                        System.out.println("Computer move: " + decoded.toStringShort());
+                        System.out.println("Computer move: " + decoded.toStringShort() + ", " + sanPair);
                     }
-                    moveHistory.add(decoded.toAlgebraic());
                     board.makeMove(move);
                     positionHistory.add(board.positionKey());
                 }
@@ -493,6 +497,18 @@ public class TerminalChess implements BoardPrinter {
     private static boolean chooseOpeningBook() {
         System.out.print("Use opening book? (y/n): ");
         return scanner.nextLine().trim().equalsIgnoreCase("y");
+    }
+
+    private static String formatMovePair(List<String> moveHistory) {
+        int lastIdx = moveHistory.size() - 1;
+        int moveNumber = (lastIdx / 2) + 1;
+        if (lastIdx % 2 == 0) {
+            // White just moved
+            return moveNumber + ". " + moveHistory.get(lastIdx);
+        } else {
+            // Black just moved — show both white and black moves
+            return moveNumber + ". " + moveHistory.get(lastIdx - 1) + " " + moveHistory.get(lastIdx);
+        }
     }
 
     private static void clearTerminal() {

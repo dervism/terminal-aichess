@@ -57,6 +57,7 @@ public interface Chess {
                 .map(i -> reverse ? (8 - 1 - i) : i)
                 .forEach(row -> {
                     String line = IntStream.range(0, 8)
+                            .map(c -> reverse ? c : (7 - c))
                             .mapToObj(col -> {
                                 String square = pieceToStr.apply(board.getPiece(BoardPrinter.indexFn.apply(row, col)));
                                 if ((row + col) % 2 != 0) {

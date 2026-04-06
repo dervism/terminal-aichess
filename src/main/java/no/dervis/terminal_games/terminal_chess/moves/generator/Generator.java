@@ -9,7 +9,6 @@ import no.dervis.terminal_games.terminal_chess.moves.attacks.PawnAttacks;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 public class Generator implements Chess {
 
@@ -87,7 +86,7 @@ public class Generator implements Chess {
 
     public List<Integer> generateMoves(int color) {
         List<Integer> moves = new ArrayList<>();
-        long enPassantTarget = getEnPassantTarget(Objects.requireNonNullElse(board.history().peekLast(), 0));
+        long enPassantTarget = getEnPassantTarget(board.lastMove());
 
         generateKingMoves(moves, color);
         generatePawnMoves(moves, color, enPassantTarget);

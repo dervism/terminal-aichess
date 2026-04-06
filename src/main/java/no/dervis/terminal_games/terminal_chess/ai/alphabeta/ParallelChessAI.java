@@ -15,15 +15,12 @@ import java.util.Random;
  *
  * <p>Key features:</p>
  * <ul>
- *   <li><b>Depth diversity</b> — threads start at staggered depths (1, 2, 3, 1, 2, 3, ...)
- *       so they explore different parts of the search tree sooner.</li>
- *   <li><b>Root move shuffling</b> — helper threads shuffle their root move list so
- *       different threads prioritise different candidate moves, reducing redundant work.</li>
- *   <li><b>Independent time management</b> — each thread independently decides when to stop
- *       starting new depth iterations, rather than thread 0 killing everyone via the shared
- *       stop flag. The hard time limit still stops all threads.</li>
- *   <li><b>Aspiration windows, null-move pruning, RFP, futility, razoring, LMP, IID,
- *       singular extensions, countermove heuristic, history-informed LMR, delta pruning</b></li>
+ *   <li><b>Depth diversity</b> — threads start at staggered depths</li>
+ *   <li><b>Root move shuffling</b> — helper threads shuffle their root move list</li>
+ *   <li><b>Incremental Zobrist hashing</b> — O(1) hash per node</li>
+ *   <li><b>All search enhancements</b> from ChessAI (aspiration, null-move, RFP, futility,
+ *       razoring, LMP, LMR with log table, IID, singular extensions, countermove,
+ *       SEE pruning, promotion scoring, lazy move picking)</li>
  * </ul>
  */
 public class ParallelChessAI implements Chess, Engine {
@@ -41,6 +38,7 @@ public class ParallelChessAI implements Chess, Engine {
 
     // Move ordering score thresholds
     private static final int TT_MOVE_SCORE    = 10_000_000;
+    private static final int PROMOTION_SCORE  =  5_000_000;
     private static final int CAPTURE_BASE     =  1_000_000;
     private static final int KILLER_SCORE_0   =    900_000;
     private static final int KILLER_SCORE_1   =    800_000;
@@ -76,23 +74,27 @@ public class ParallelChessAI implements Chess, Engine {
     private static final int SE_MIN_DEPTH = 8;
     private static final int SE_MARGIN_MULTIPLIER = 2;
 
+    // SEE pruning in main search
+    private static final int SEE_PRUNE_DEPTH = 6;
+
     // History clamping
     private static final int HISTORY_MAX = 16384;
 
-    // MVV-LVA table
-    private static final int[][] MVV_LVA = new int[6][6];
+    // LMR reduction table (logarithmic)
+    private static final int[][] LMR_TABLE = new int[64][64];
     static {
-        int[] values = {1, 3, 3, 5, 9, 10};
-        for (int victim = 0; victim < 6; victim++)
-            for (int attacker = 0; attacker < 6; attacker++)
-                MVV_LVA[victim][attacker] = values[victim] * 10 - values[attacker];
+        for (int d = 1; d < 64; d++) {
+            for (int m = 1; m < 64; m++) {
+                LMR_TABLE[d][m] = Math.max(0, (int) (0.77 + Math.log(d) * Math.log(m) / 2.36));
+            }
+        }
     }
 
     // Depth diversity table
     private static final int[] DEPTH_OFFSETS = {0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0};
 
     // ===== Shared Transposition Table =====
-    private static final int TT_SIZE = 1 << 20;
+    private static final int TT_SIZE = 1 << 22; // 4M entries
     private static final int TT_MASK = TT_SIZE - 1;
 
     private final long[]  ttKey   = new long[TT_SIZE];
@@ -100,21 +102,6 @@ public class ParallelChessAI implements Chess, Engine {
     private final short[] ttScore = new short[TT_SIZE];
     private final byte[]  ttDepth = new byte[TT_SIZE];
     private final byte[]  ttFlag  = new byte[TT_SIZE];
-
-    // ===== Zobrist Hashing (static, read-only) =====
-    private static final long[][] ZOBRIST_PIECE = new long[12][64];
-    private static final long ZOBRIST_SIDE;
-    private static final long[] ZOBRIST_CASTLING = new long[16];
-
-    static {
-        Random rng = new Random(0xDEADBEEFL);
-        for (int p = 0; p < 12; p++)
-            for (int s = 0; s < 64; s++)
-                ZOBRIST_PIECE[p][s] = rng.nextLong();
-        ZOBRIST_SIDE = rng.nextLong();
-        for (int c = 0; c < 16; c++)
-            ZOBRIST_CASTLING[c] = rng.nextLong();
-    }
 
     // ===== Shared Search Control =====
     private volatile boolean stopped;
@@ -223,25 +210,6 @@ public class ParallelChessAI implements Chess, Engine {
         return 0;
     }
 
-    // ===== Zobrist Hashing =====
-
-    private long computeHash(Bitboard board) {
-        long hash = 0L;
-        for (int color = 0; color < 2; color++) {
-            for (int pt = 0; pt < 6; pt++) {
-                long bb = Evaluation.getPieceBB(board, pt, color);
-                while (bb != 0) {
-                    int sq = Long.numberOfTrailingZeros(bb);
-                    hash ^= ZOBRIST_PIECE[color * 6 + pt][sq];
-                    bb &= bb - 1;
-                }
-            }
-        }
-        if (board.turn() == black) hash ^= ZOBRIST_SIDE;
-        hash ^= ZOBRIST_CASTLING[board.castlingRights()];
-        return hash;
-    }
-
     // ===== PV Extraction =====
 
     private String extractPV(Bitboard board, int maxLength) {
@@ -251,7 +219,7 @@ public class ParallelChessAI implements Chess, Engine {
         int pvLength = 0;
 
         for (int i = 0; i < maxLength; i++) {
-            long hash = computeHash(copy);
+            long hash = copy.getHash();
             for (int j = 0; j < pvLength; j++) {
                 if (seenHashes[j] == hash) return sb.toString().trim();
             }
@@ -325,7 +293,6 @@ public class ParallelChessAI implements Chess, Engine {
             for (int depth = startDepth; depth <= MAX_PLY; depth++) {
                 int score;
 
-                // Aspiration windows
                 if (depth <= 3) {
                     score = searchRoot(depth, color, -INFINITY, INFINITY);
                 } else {
@@ -385,16 +352,16 @@ public class ParallelChessAI implements Chess, Engine {
         // ----- Root Search -----
 
         private int searchRoot(int depth, int color, int alpha, int beta) {
-            long hash = computeHash(board);
-            int ttBestMove = probeTTMove(hash);
+            long hash = board.getHash();
+            int ttBest = probeTTMove(hash);
 
-            int[] scores = scoreMoves(rootMoves, board, ttBestMove, 0, color, 0);
-            sortMoves(rootMoves, scores);
+            int[] scores = scoreMoves(rootMoves, board, ttBest, 0, color, 0);
 
             int localBest = rootMoves.getFirst();
             int localBestScore = -INFINITY;
 
             for (int i = 0; i < rootMoves.size(); i++) {
+                pickMove(rootMoves, scores, i);
                 int move = rootMoves.get(i);
                 Bitboard copy = board.copy();
                 copy.makeMove(move);
@@ -432,8 +399,8 @@ public class ParallelChessAI implements Chess, Engine {
 
             nodesSearched++;
 
-            // TT probe
-            long hash = computeHash(board);
+            // TT probe (incremental hash)
+            long hash = board.getHash();
             int ttHitMove = 0;
             int ttIndex = (int) (hash & TT_MASK);
             if (ttKey[ttIndex] == hash) {
@@ -478,7 +445,6 @@ public class ParallelChessAI implements Chess, Engine {
                 }
             }
 
-            // Static evaluation for pruning decisions
             int staticEval = inCheck ? -INFINITY : Evaluation.evaluate(board);
 
             // Reverse Futility Pruning
@@ -496,7 +462,6 @@ public class ParallelChessAI implements Chess, Engine {
                 if (razorScore <= alpha) return razorScore;
             }
 
-            // Futility pruning flag
             boolean canFutilityPrune = !pvNode && !inCheck
                     && depth <= FP_MAX_DEPTH
                     && staticEval + FP_MARGIN[depth] < alpha
@@ -511,7 +476,6 @@ public class ParallelChessAI implements Chess, Engine {
             }
 
             int[] moveScores = scoreMoves(moves, board, ttHitMove, ply, color, prevMove);
-            sortMoves(moves, moveScores);
 
             // Singular Extensions
             boolean singularExtension = false;
@@ -538,21 +502,30 @@ public class ParallelChessAI implements Chess, Engine {
             byte flag = TT_ALPHA;
 
             for (int i = 0; i < moves.size(); i++) {
+                pickMove(moves, moveScores, i);
                 int move = moves.get(i);
 
                 if (move == excludedMove) continue;
 
                 boolean isCapture = isCapture(move, board);
+                boolean isPromotion = (move & 0xF) > 0;
 
                 // Futility pruning
-                if (canFutilityPrune && !isCapture && i > 0) {
+                if (canFutilityPrune && !isCapture && !isPromotion && i > 0) {
                     continue;
                 }
 
                 // Late Move Pruning
-                if (!pvNode && !inCheck && depth <= LMP_MAX_DEPTH && !isCapture
+                if (!pvNode && !inCheck && depth <= LMP_MAX_DEPTH && !isCapture && !isPromotion
                         && i >= LMP_MOVE_THRESHOLD[depth]) {
                     continue;
+                }
+
+                // SEE pruning of bad captures
+                if (!pvNode && !inCheck && depth <= SEE_PRUNE_DEPTH
+                        && isCapture && !isPromotion && i > 0
+                        && SEE.isLosingCapture(board, move)) {
+                    if (depth <= 2) continue;
                 }
 
                 Bitboard copy = board.copy();
@@ -561,16 +534,17 @@ public class ParallelChessAI implements Chess, Engine {
                 int score;
                 int newDepth = depth - 1;
 
-                // Singular extension
                 if (singularExtension && move == ttHitMove) {
                     newDepth += 1;
                 }
 
-                // LMR — history-informed
-                boolean doLMR = !pvNode && i >= 3 && depth >= 3 && !isCapture && !inCheck;
+                // LMR — logarithmic, history-informed
+                boolean doLMR = !pvNode && i >= 3 && depth >= 3 && !isCapture && !isPromotion && !inCheck;
 
                 if (doLMR) {
-                    int reduction = 1 + (i >= 6 ? 1 : 0);
+                    int d = Math.min(depth, 63);
+                    int m = Math.min(i, 63);
+                    int reduction = LMR_TABLE[d][m];
 
                     int from = move >>> 14;
                     int to = (move >>> 7) & 0x3F;
@@ -581,6 +555,7 @@ public class ParallelChessAI implements Chess, Engine {
                         reduction = Math.max(0, reduction - 1);
                     }
                     reduction = Math.min(reduction, newDepth - 1);
+                    reduction = Math.max(0, reduction);
 
                     score = -alphaBeta(copy, newDepth - reduction, -alpha - 1, -alpha,
                             1 - color, ply + 1, false, move, 0);
@@ -655,6 +630,17 @@ public class ParallelChessAI implements Chess, Engine {
 
             nodesSearched++;
 
+            // TT probe in quiescence
+            long hash = board.getHash();
+            int ttIndex = (int) (hash & TT_MASK);
+            if (ttKey[ttIndex] == hash && ttDepth[ttIndex] >= 0) {
+                int ttVal = ttScore[ttIndex];
+                byte ttF = ttFlag[ttIndex];
+                if (ttF == TT_EXACT) return ttVal;
+                if (ttF == TT_BETA && ttVal >= beta) return beta;
+                if (ttF == TT_ALPHA && ttVal <= alpha) return alpha;
+            }
+
             int standPat = Evaluation.evaluate(board);
             if (standPat >= beta) return beta;
             if (standPat > alpha) alpha = standPat;
@@ -672,21 +658,29 @@ public class ParallelChessAI implements Chess, Engine {
                 return 0;
             }
 
-            if (!inCheck) {
-                moves = moves.stream().filter(m -> isCapture(m, board)).toList();
+            // Filter to captures and promotions (unless in check)
+            List<Integer> captureMoves;
+            if (inCheck) {
+                captureMoves = moves;
+            } else {
+                captureMoves = new ArrayList<>();
+                for (int m : moves) {
+                    if (isCapture(m, board) || (m & 0xF) > 0) {
+                        captureMoves.add(m);
+                    }
+                }
             }
 
-            int[] moveScores = scoreMoves(moves, board, 0, ply, color, 0);
-            var mutableMoves = new ArrayList<>(moves);
-            sortMoves(mutableMoves, moveScores);
+            int[] moveScores = scoreMoves(captureMoves, board, 0, ply, color, 0);
 
-            for (int move : mutableMoves) {
-                // SEE pruning
+            for (int i = 0; i < captureMoves.size(); i++) {
+                pickMove(captureMoves, moveScores, i);
+                int move = captureMoves.get(i);
+
                 if (!inCheck && isCapture(move, board) && SEE.isLosingCapture(board, move)) {
                     continue;
                 }
 
-                // Delta pruning
                 if (!inCheck && isCapture(move, board)) {
                     int to = (move >>> 7) & 0x3F;
                     int capturedPiece = board.getPiece(to);
@@ -728,8 +722,18 @@ public class ParallelChessAI implements Chess, Engine {
                     continue;
                 }
 
+                int promotionPiece = move & 0xF;
                 int to = (move >>> 7) & 0x3F;
                 int captured = board.getPiece(to);
+
+                if (promotionPiece == queen) {
+                    scores[i] = PROMOTION_SCORE;
+                    continue;
+                }
+                if (promotionPiece > 0) {
+                    scores[i] = PROMOTION_SCORE - 100_000;
+                    continue;
+                }
 
                 if (captured != -1 || ((move >>> 4) & 0x7) == MoveType.EN_PASSANT.ordinal()) {
                     int seeScore = SEE.see(board, move);
@@ -762,20 +766,18 @@ public class ParallelChessAI implements Chess, Engine {
             return scores;
         }
 
-        private void sortMoves(List<Integer> moves, int[] scores) {
-            for (int i = 0; i < moves.size() - 1; i++) {
-                int bestIdx = i;
-                for (int j = i + 1; j < moves.size(); j++) {
-                    if (scores[j] > scores[bestIdx]) bestIdx = j;
-                }
-                if (bestIdx != i) {
-                    int tmpMove = moves.get(i);
-                    moves.set(i, moves.get(bestIdx));
-                    moves.set(bestIdx, tmpMove);
-                    int tmpScore = scores[i];
-                    scores[i] = scores[bestIdx];
-                    scores[bestIdx] = tmpScore;
-                }
+        private void pickMove(List<Integer> moves, int[] scores, int i) {
+            int bestIdx = i;
+            for (int j = i + 1; j < moves.size(); j++) {
+                if (scores[j] > scores[bestIdx]) bestIdx = j;
+            }
+            if (bestIdx != i) {
+                int tmpMove = moves.get(i);
+                moves.set(i, moves.get(bestIdx));
+                moves.set(bestIdx, tmpMove);
+                int tmpScore = scores[i];
+                scores[i] = scores[bestIdx];
+                scores[bestIdx] = tmpScore;
             }
         }
 

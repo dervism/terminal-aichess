@@ -57,8 +57,8 @@ public class Evaluation implements Chess, Board {
     private static final int TEMPO_BONUS = 15;
 
     // Passed pawn bonus by rank advancement (0-7)
-    private static final int[] PASSED_PAWN_BONUS_MG = {0,  5, 10, 20, 35, 60, 100, 0};
-    private static final int[] PASSED_PAWN_BONUS_EG = {0, 10, 20, 40, 70, 120, 200, 0};
+    private static final int[] PASSED_PAWN_BONUS_MG = {0,  5, 10, 20, 40, 80, 150, 0};
+    private static final int[] PASSED_PAWN_BONUS_EG = {0, 10, 20, 45, 90, 180, 350, 0};
 
     // Mobility weights per square (centipawns per available square)
     private static final int[] MOBILITY_MG = {0, 4, 3, 2, 1, 0};
@@ -108,6 +108,17 @@ public class Evaluation implements Chess, Board {
     private static final int KNIGHT_PAWN_ADJ_EG = 2;
     private static final int BISHOP_PAWN_ADJ_MG = -3;
     private static final int BISHOP_PAWN_ADJ_EG = -2;
+
+    // Passed pawn advanced bonuses
+    private static final int UNBLOCKED_PASSER_BONUS_MG = 5;   // per advancement rank
+    private static final int UNBLOCKED_PASSER_BONUS_EG = 15;  // per advancement rank
+    private static final int FREE_PATH_PASSER_BONUS_MG = 15;
+    private static final int FREE_PATH_PASSER_BONUS_EG = 50;
+    private static final int ROOK_BEHIND_PASSER_BONUS_MG = 20;
+    private static final int ROOK_BEHIND_PASSER_BONUS_EG = 30;
+    private static final int PROTECTED_PASSER_BONUS_MG = 15;
+    private static final int PROTECTED_PASSER_BONUS_EG = 25;
+    private static final int UNSTOPPABLE_PASSER_BONUS = 400; // EG only
 
     // ----- Masks -----
 
@@ -346,11 +357,23 @@ public class Evaluation implements Chess, Board {
         mgBlack += bBishopCount * pawnDelta * BISHOP_PAWN_ADJ_MG;
         egBlack += bBishopCount * pawnDelta * BISHOP_PAWN_ADJ_EG;
 
-        // 4. Pawn structure (includes backward pawns)
+        // King squares (used by multiple evaluations below)
+        int wKingSq = Long.numberOfTrailingZeros(board.kingPiece(white));
+        int bKingSq = Long.numberOfTrailingZeros(board.kingPiece(black));
+
+        // 4. Pawn structure (doubled, isolated, backward)
         int[] wPawnStructure = evaluatePawnStructure(wPawns, bPawns, white);
         int[] bPawnStructure = evaluatePawnStructure(bPawns, wPawns, black);
         mgWhite += wPawnStructure[0]; egWhite += wPawnStructure[1];
         mgBlack += bPawnStructure[0]; egBlack += bPawnStructure[1];
+
+        // 4b. Passed pawns (base bonus + unblocked/free path/rook support/unstoppable)
+        int[] wPassedPawns = evaluatePassedPawns(board, wPawns, bPawns,
+                board.getRooks(white), bKingSq, white, allPieces);
+        int[] bPassedPawns = evaluatePassedPawns(board, bPawns, wPawns,
+                board.getRooks(black), wKingSq, black, allPieces);
+        mgWhite += wPassedPawns[0]; egWhite += wPassedPawns[1];
+        mgBlack += bPassedPawns[0]; egBlack += bPassedPawns[1];
 
         // 5. Rook on open/semi-open files
         int[] wRookFiles = evaluateRookFiles(board.getRooks(white), wPawns, bPawns);
@@ -365,9 +388,6 @@ public class Evaluation implements Chess, Board {
         mgBlack += bConnRooks[0]; egBlack += bConnRooks[1];
 
         // 7. Rook on 7th rank
-        int wKingSq = Long.numberOfTrailingZeros(board.kingPiece(white));
-        int bKingSq = Long.numberOfTrailingZeros(board.kingPiece(black));
-
         int[] wRook7th = evaluateRookOn7th(board.getRooks(white), bKingSq, bPawns, white);
         int[] bRook7th = evaluateRookOn7th(board.getRooks(black), wKingSq, wPawns, black);
         mgWhite += wRook7th[0]; egWhite += wRook7th[1];
@@ -454,20 +474,90 @@ public class Evaluation implements Chess, Board {
                 eg += ISOLATED_PAWN_PENALTY_EG;
             }
 
-            // Passed pawns
+            // Backward pawns: stop square attacked by enemy pawn and no friendly pawn
+            // on adjacent files at same or lower rank can support it
+            if (isBackwardPawn(sq, file, rank, friendlyPawns, enemyPawns, color)) {
+                mg += BACKWARD_PAWN_PENALTY_MG;
+                eg += BACKWARD_PAWN_PENALTY_EG;
+            }
+
+            pawns &= pawns - 1;
+        }
+        return new int[]{mg, eg};
+    }
+
+    /**
+     * Returns {mgScore, egScore} for passed pawns with advanced evaluation:
+     * base bonus, unblockaded bonus, free path, rook behind passer,
+     * protected passer, and unstoppable passer detection.
+     */
+    private static int[] evaluatePassedPawns(Bitboard board, long friendlyPawns, long enemyPawns,
+                                              long friendlyRooks, int enemyKingSq,
+                                              int color, long allPieces) {
+        int mg = 0, eg = 0;
+        long pawns = friendlyPawns;
+
+        while (pawns != 0) {
+            int sq = Long.numberOfTrailingZeros(pawns);
+            int file = sq % 8;
+            int rank = sq / 8;
+
             if (isPassedPawn(sq, file, rank, enemyPawns, color)) {
                 int advancement = (color == white) ? rank - 1 : 6 - rank;
                 if (advancement >= 0 && advancement < PASSED_PAWN_BONUS_MG.length) {
                     mg += PASSED_PAWN_BONUS_MG[advancement];
                     eg += PASSED_PAWN_BONUS_EG[advancement];
                 }
-            }
 
-            // Backward pawns: stop square attacked by enemy pawn and no friendly pawn
-            // on adjacent files at same or lower rank can support it
-            if (isBackwardPawn(sq, file, rank, friendlyPawns, enemyPawns, color)) {
-                mg += BACKWARD_PAWN_PENALTY_MG;
-                eg += BACKWARD_PAWN_PENALTY_EG;
+                // Unblockaded: stop square is empty
+                int stopSq = (color == white) ? sq + 8 : sq - 8;
+                if (stopSq >= 0 && stopSq <= 63 && board.getPiece(stopSq) == -1) {
+                    mg += advancement * UNBLOCKED_PASSER_BONUS_MG;
+                    eg += advancement * UNBLOCKED_PASSER_BONUS_EG;
+
+                    // Free path: all squares from stop square to promotion are empty
+                    boolean freePath = true;
+                    int checkSq = stopSq;
+                    while (checkSq >= 0 && checkSq <= 63) {
+                        if ((allPieces & (1L << checkSq)) != 0) {
+                            freePath = false;
+                            break;
+                        }
+                        checkSq = (color == white) ? checkSq + 8 : checkSq - 8;
+                    }
+                    if (freePath) {
+                        mg += FREE_PATH_PASSER_BONUS_MG;
+                        eg += FREE_PATH_PASSER_BONUS_EG;
+                    }
+
+                    // Unstoppable passer (EG): enemy king outside the square of the pawn
+                    int movesToPromo = (color == white) ? 7 - rank : rank;
+                    int promoSq = (color == white) ? (56 + file) : file;
+                    int kingDist = chebyshevDistance(enemyKingSq, promoSq);
+                    if (freePath && movesToPromo < kingDist) {
+                        eg += UNSTOPPABLE_PASSER_BONUS;
+                    }
+                }
+
+                // Rook behind passer: friendly rook on same file behind the pawn
+                long fileOfPawn = FILES[file];
+                long behindMask = 0L;
+                if (color == white) {
+                    for (int r = 0; r < rank; r++) behindMask |= RANKS[r];
+                } else {
+                    for (int r = rank + 1; r <= 7; r++) behindMask |= RANKS[r];
+                }
+                if ((friendlyRooks & fileOfPawn & behindMask) != 0) {
+                    mg += ROOK_BEHIND_PASSER_BONUS_MG;
+                    eg += ROOK_BEHIND_PASSER_BONUS_EG;
+                }
+
+                // Protected passer: defended by another friendly pawn
+                long pawnDefenders = PawnAttacks.getAllPawnAttacks(sq, 1 - color);
+                if ((pawnDefenders & friendlyPawns) != 0) {
+                    mg += PROTECTED_PASSER_BONUS_MG;
+                    eg += PROTECTED_PASSER_BONUS_EG;
+                }
             }
 
             pawns &= pawns - 1;

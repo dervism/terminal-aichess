@@ -3,38 +3,79 @@ package no.dervis.terminal_games.terminal_chess.board;
 import no.dervis.terminal_games.terminal_chess.moves.Move;
 
 import java.util.LinkedList;
+import java.util.Random;
 
 public class Bitboard implements Board, Chess {
+
+    // ===== Zobrist Hashing (shared by all engines) =====
+    public static final long[][] ZOBRIST_PIECE = new long[12][64];
+    public static final long ZOBRIST_SIDE;
+    public static final long[] ZOBRIST_CASTLING = new long[16];
+    public static final long[] ZOBRIST_EP_FILE = new long[8]; // en passant file
+
+    static {
+        Random rng = new Random(0xDEADBEEFL);
+        for (int p = 0; p < 12; p++)
+            for (int s = 0; s < 64; s++)
+                ZOBRIST_PIECE[p][s] = rng.nextLong();
+        ZOBRIST_SIDE = rng.nextLong();
+        for (int c = 0; c < 16; c++)
+            ZOBRIST_CASTLING[c] = rng.nextLong();
+        for (int f = 0; f < 8; f++)
+            ZOBRIST_EP_FILE[f] = rng.nextLong();
+    }
 
     private long[] whitePieces;
     private long[] blackPieces;
     private LinkedList<Integer> history;
+    private int lastMove; // cached for fast en passant detection in search copies
     private int castlingRights;
     private int colorToMove;
     private int halfMoveClock;
+    private long zobristHash;
 
     public Bitboard() {
         whitePieces = new long[6];
         blackPieces = new long[6];
         history = new LinkedList<>();
+        lastMove = 0;
         colorToMove = 0;
         castlingRights = 0b1111;
         halfMoveClock = 0;
+        zobristHash = 0L;
     }
 
+    /**
+     * Fast copy for search: copies piece arrays and scalar state.
+     * Shares the history list reference — only lastMove is needed in search.
+     */
     public Bitboard copy() {
         Bitboard copy = new Bitboard();
         copy.whitePieces = whitePieces.clone();
         copy.blackPieces = blackPieces.clone();
-        copy.history = new LinkedList<>(history);
+        copy.history = history; // share reference — search only needs lastMove
+        copy.lastMove = lastMove;
         copy.castlingRights = castlingRights;
         copy.colorToMove = colorToMove;
         copy.halfMoveClock = halfMoveClock;
+        copy.zobristHash = zobristHash;
+        return copy;
+    }
+
+    /**
+     * Deep copy including full history. Use for game-level operations
+     * where the full move history must be independent.
+     */
+    public Bitboard deepCopy() {
+        Bitboard copy = copy();
+        copy.history = new LinkedList<>(history);
         return copy;
     }
 
     public static Bitboard fromFEN(String fen) {
-        return FEN.toBoard(fen);
+        Bitboard board = FEN.toBoard(fen);
+        board.zobristHash = board.computeHashFromScratch();
+        return board;
     }
 
     public String toFEN() {
@@ -65,6 +106,8 @@ public class Bitboard implements Board, Chess {
         // Initialize kings
         whitePieces[5] = 0x0000000000000010L;
         blackPieces[5] = 0x1000000000000000L;
+
+        zobristHash = computeHashFromScratch();
     }
 
     public void setPiece(int pieceType, int color, int squareIndex) {
@@ -107,6 +150,7 @@ public class Bitboard implements Board, Chess {
 
     public void makeMove(int move) {
         history.add(move);
+        lastMove = move;
         int fromSquare = move >>> 14;
         int toSquare = (move >>> 7) & 0x3F;
         int moveType = (move >>> 4) & 0x7;
@@ -121,8 +165,13 @@ public class Bitboard implements Board, Chess {
         int color = piece / 6;
         int pieceType = piece % 6;
 
+        // Detect captured piece BEFORE modifying the board
+        int capturedPiece = getPiece(toSquare);
+        int capturedType = capturedPiece == -1 ? -1 : capturedPiece % 6;
+        int capturedColor = capturedPiece == -1 ? -1 : capturedPiece / 6;
+
         // Update half-move clock: reset on pawn moves or captures, increment otherwise
-        boolean isCapture = getPiece(toSquare) != -1
+        boolean isCapture = capturedPiece != -1
                 || moveType == MoveType.EN_PASSANT.ordinal();
         if (pieceType == pawn || isCapture) {
             halfMoveClock = 0;
@@ -130,8 +179,14 @@ public class Bitboard implements Board, Chess {
             halfMoveClock++;
         }
 
+        // Save old castling rights for hash update
+        int oldCastling = castlingRights;
+
         long fromBitboard = 1L << fromSquare;
         long toBitboard = 1L << toSquare;
+
+        // --- Zobrist: remove moving piece from origin ---
+        zobristHash ^= ZOBRIST_PIECE[color * 6 + pieceType][fromSquare];
 
         if (color == white) {
             whitePieces[pieceType] ^= fromBitboard | toBitboard;
@@ -145,63 +200,98 @@ public class Bitboard implements Board, Chess {
             }
         }
 
+        // --- Zobrist: remove captured piece, add moving piece at destination ---
+        if (capturedPiece != -1) {
+            zobristHash ^= ZOBRIST_PIECE[capturedColor * 6 + capturedType][toSquare];
+        }
+        zobristHash ^= ZOBRIST_PIECE[color * 6 + pieceType][toSquare];
+
         // Handle en passant
         if (moveType == MoveType.EN_PASSANT.ordinal()) {
             if (color == white) {
-                blackPieces[pawn] &= ~(1L << (toSquare - 8));
+                int epSq = toSquare - 8;
+                blackPieces[pawn] &= ~(1L << epSq);
+                zobristHash ^= ZOBRIST_PIECE[1 * 6 + pawn][epSq]; // remove black pawn
             } else {
-                whitePieces[pawn] &= ~(1L << (toSquare + 8));
+                int epSq = toSquare + 8;
+                whitePieces[pawn] &= ~(1L << epSq);
+                zobristHash ^= ZOBRIST_PIECE[0 * 6 + pawn][epSq]; // remove white pawn
             }
         }
 
         // Handle castling
-        if (moveType == 2) {
+        if (moveType == 2) { // Kingside
             if (color == white) {
-                whitePieces[rook] ^= 0xA0; // Update rook position for white kingside castling
+                whitePieces[rook] ^= 0xA0;
+                zobristHash ^= ZOBRIST_PIECE[0 * 6 + rook][7]; // h1
+                zobristHash ^= ZOBRIST_PIECE[0 * 6 + rook][5]; // f1
             } else {
-                blackPieces[rook] ^= 0xA000000000000000L; // Update rook position for black kingside castling
+                blackPieces[rook] ^= 0xA000000000000000L;
+                zobristHash ^= ZOBRIST_PIECE[1 * 6 + rook][63]; // h8
+                zobristHash ^= ZOBRIST_PIECE[1 * 6 + rook][61]; // f8
             }
-        } else if (moveType == 3) {
+        } else if (moveType == 3) { // Queenside
             if (color == white) {
-                whitePieces[rook] ^= 0x9; // Update rook position for white queenside castling
+                whitePieces[rook] ^= 0x9;
+                zobristHash ^= ZOBRIST_PIECE[0 * 6 + rook][0]; // a1
+                zobristHash ^= ZOBRIST_PIECE[0 * 6 + rook][3]; // d1
             } else {
-                blackPieces[rook] ^= 0x900000000000000L; // Update rook position for black queenside castling
+                blackPieces[rook] ^= 0x900000000000000L;
+                zobristHash ^= ZOBRIST_PIECE[1 * 6 + rook][56]; // a8
+                zobristHash ^= ZOBRIST_PIECE[1 * 6 + rook][59]; // d8
             }
         }
 
         // Handle promotion
         if (promotionPiece > 0) {
             if (color == white) {
-                whitePieces[pawn] &= ~toBitboard; // Remove promoted white pawn
-                whitePieces[promotionPiece] |= toBitboard; // Add promoted white piece
+                whitePieces[pawn] &= ~toBitboard;
+                whitePieces[promotionPiece] |= toBitboard;
             } else {
-                blackPieces[pawn] &= ~toBitboard; // Remove promoted black pawn
-                blackPieces[promotionPiece] |= toBitboard; // Add promoted black piece
+                blackPieces[pawn] &= ~toBitboard;
+                blackPieces[promotionPiece] |= toBitboard;
             }
+            // Zobrist: swap pawn for promoted piece
+            zobristHash ^= ZOBRIST_PIECE[color * 6 + pawn][toSquare];
+            zobristHash ^= ZOBRIST_PIECE[color * 6 + promotionPiece][toSquare];
         }
 
         // update the castling rights
         if (color == white) {
             if (pieceType == king) {
-                castlingRights &= ~0b0011; // Remove white king-side and queen-side castling rights
+                castlingRights &= ~0b0011;
             } else if (pieceType == rook) {
                 if (fromSquare == h1.index()) {
-                    castlingRights &= ~0b0001; // Remove white king-side castling rights
+                    castlingRights &= ~0b0001;
                 } else if (fromSquare == a1.index()) {
-                    castlingRights &= ~0b0010; // Remove white queen-side castling rights
+                    castlingRights &= ~0b0010;
                 }
             }
         } else {
             if (pieceType == king) {
-                castlingRights &= ~0b1100; // Remove black king-side and queen-side castling rights
+                castlingRights &= ~0b1100;
             } else if (pieceType == rook) {
                 if (fromSquare == h8.index()) {
-                    castlingRights &= ~0b0100; // Remove black king-side castling rights
+                    castlingRights &= ~0b0100;
                 } else if (fromSquare == a8.index()) {
-                    castlingRights &= ~0b1000; // Remove black queen-side castling rights
+                    castlingRights &= ~0b1000;
                 }
             }
         }
+        // Also update castling if a rook is captured
+        if (capturedType == rook) {
+            if (toSquare == h1.index()) castlingRights &= ~0b0001;
+            else if (toSquare == a1.index()) castlingRights &= ~0b0010;
+            else if (toSquare == h8.index()) castlingRights &= ~0b0100;
+            else if (toSquare == a8.index()) castlingRights &= ~0b1000;
+        }
+
+        // Zobrist: update castling rights
+        zobristHash ^= ZOBRIST_CASTLING[oldCastling];
+        zobristHash ^= ZOBRIST_CASTLING[castlingRights];
+
+        // Zobrist: flip side to move
+        zobristHash ^= ZOBRIST_SIDE;
 
         colorToMove ^= 1;
     }
@@ -256,6 +346,10 @@ public class Bitboard implements Board, Chess {
         return history;
     }
 
+    public int lastMove() {
+        return lastMove;
+    }
+
     public int castlingRights() {
         return castlingRights;
     }
@@ -274,6 +368,8 @@ public class Bitboard implements Board, Chess {
      * Used by null-move pruning in the search.
      */
     public void makeNullMove() {
+        zobristHash ^= ZOBRIST_SIDE;
+        lastMove = 0; // no en passant after null move
         colorToMove ^= 1;
     }
 
@@ -283,6 +379,29 @@ public class Bitboard implements Board, Chess {
 
     public void setCastlingRights(int rights) {
         this.castlingRights = rights;
+    }
+
+    /** Returns the incrementally-updated Zobrist hash of the position. */
+    public long getHash() {
+        return zobristHash;
+    }
+
+    /** Recomputes the Zobrist hash from scratch (used for initialization). */
+    public long computeHashFromScratch() {
+        long hash = 0L;
+        for (int c = 0; c < 2; c++) {
+            for (int pt = 0; pt < 6; pt++) {
+                long bb = (c == 0) ? whitePieces[pt] : blackPieces[pt];
+                while (bb != 0) {
+                    int sq = Long.numberOfTrailingZeros(bb);
+                    hash ^= ZOBRIST_PIECE[c * 6 + pt][sq];
+                    bb &= bb - 1;
+                }
+            }
+        }
+        if (colorToMove == black) hash ^= ZOBRIST_SIDE;
+        hash ^= ZOBRIST_CASTLING[castlingRights];
+        return hash;
     }
 
     public long opponentPieces(int color) {

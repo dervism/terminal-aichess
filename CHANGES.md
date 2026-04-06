@@ -1,5 +1,57 @@
 # Changelog
 
+## Search Performance Overhaul (2026-04-07)
+
+Major performance rewrite across `Bitboard`, `ChessAI`, and `ParallelChessAI` to eliminate tactical blunders in sharp middlegame positions by reaching deeper search depths.
+
+### Incremental Zobrist Hashing (Bitboard)
+- Replaced per-node O(pieces) hash computation with O(1) incremental updates in `makeMove()`
+- XOR-based: `ZOBRIST_PIECE[12][64]`, `ZOBRIST_SIDE`, `ZOBRIST_CASTLING[16]`, `ZOBRIST_EP_FILE[8]`
+- Hash updated incrementally for: piece movement, captures, en passant, castling rook moves, promotions, castling rights changes, side flip
+- `computeHashFromScratch()` retained for initialization and verification
+- `initialiseBoard()` and `fromFEN()` compute initial hash at setup
+
+### Board Copy Optimization (Bitboard)
+- `copy()` shares history list reference (search only needs `lastMove` field)
+- `deepCopy()` added for contexts that need full history (e.g., game loops)
+- Eliminated LinkedList allocation per search node
+
+### Rook-Capture Castling Rights Fix (Bitboard)
+- Fixed bug: capturing a rook on its home square now removes the corresponding castling right
+- Previously only handled rook movement, not rook capture
+
+### Transposition Table Enlargement
+- TT size increased from 1M to 4M entries (`1 << 22`)
+- Reduces re-search of previously evaluated positions
+
+### Logarithmic LMR Table
+- Pre-computed `LMR_TABLE[64][64]` using `reduction = 0.77 + ln(depth) * ln(moveNumber) / 2.36`
+- Replaces ad-hoc linear formula for smoother, more accurate reductions
+
+### Promotion-Aware Move Ordering
+- Queen promotions scored at 5M priority (between TT move at 10M and captures at 1M)
+- Ensures promotions are searched early in the move list
+
+### SEE Pruning in Main Search
+- At depth <= 2: skip losing captures entirely (SEE < 0)
+- At depth 3-6: let losing captures through to LMR (reduced search)
+- Promotions excluded from SEE pruning
+
+### Lazy Move Picking
+- `pickMove()` selects the best remaining move one at a time (selection sort)
+- Avoids full O(n log n) sort when beta cutoff happens early (most nodes)
+
+### TT Probe in Quiescence Search
+- Quiescence now probes the transposition table before evaluating captures
+- Reduces redundant quiescence exploration for positions already evaluated
+
+### Quiescence Cleanup
+- Replaced `stream().filter().toList()` with simple loop for capture/promotion generation
+- Quiescence now considers promotions in addition to captures
+
+### Promotion-Safe Pruning
+- Promotions excluded from futility pruning and LMP to prevent missing queen promotions
+
 ## Search Improvements (2026-04-06)
 
 ### Deleted
@@ -119,11 +171,40 @@ Knights benefit from more pawns (closed positions), bishops from fewer pawns (op
 - Knight: +3 MG / +2 EG per pawn above 8 per knight
 - Bishop: -3 MG / -2 EG per pawn above 8 per bishop
 
+## Passed Pawn Evaluation Improvements (2026-04-06)
+
+Dedicated `evaluatePassedPawns` method replaces the simple bonus previously in `evaluatePawnStructure`. Addresses the key weakness of severely undervaluing far-advanced passed pawns.
+
+### Base Bonus Increase
+- 6th rank: 60→80 MG, 120→180 EG
+- 7th rank: 100→150 MG, 200→350 EG
+
+### Unblockaded Passer (MG+EG)
+If the stop square (square ahead) is empty, bonus scales with advancement rank.
+- +5 MG, +15 EG per advancement rank
+
+### Free Path to Promotion (MG+EG)
+If all squares from the pawn to the promotion square are empty.
+- +15 MG, +50 EG
+
+### Rook Behind Passed Pawn (MG+EG)
+Friendly rook on the same file behind the pawn.
+- +20 MG, +30 EG
+
+### Protected Passed Pawn (MG+EG)
+Passed pawn defended by another friendly pawn.
+- +15 MG, +25 EG
+
+### Unstoppable Passed Pawn (EG only)
+Enemy king is outside the "square of the pawn" (Chebyshev distance to promotion square exceeds pawn's moves to promote) AND the path is clear.
+- +400 EG (combined with 350 base for 7th-rank = 750+ total, approaching queen value)
+
 ### Evaluation Order in evaluate()
 1. Material + PST
 2. Bishop pair
 3. Minor piece imbalance
-4. Pawn structure (doubled, isolated, passed, backward)
+4. Pawn structure (doubled, isolated, backward)
+4b. Passed pawns (base + unblocked + free path + rook support + protected + unstoppable)
 5. Rook on open/semi-open files
 6. Connected rooks
 7. Rook on 7th rank
