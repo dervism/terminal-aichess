@@ -291,7 +291,7 @@ public class ImprovedParallelChessAI implements Chess, Engine {
                 completedDepth = depth;
 
                 // Only thread 0 prints progress
-                if (threadId == 0 && verbose) {
+                if (threadId == 0) {
                     long elapsed = System.currentTimeMillis() - startTime;
                     long totalNodes = 0;
                     for (SearchWorker w : workers) totalNodes += w.nodesSearched;

@@ -18,9 +18,9 @@ import java.nio.file.Path;
 public class TournamentMain {
 
     public static void main(String[] args) {
-        int rounds = args.length > 0 ? Integer.parseInt(args[0]) : 4;
-        long thinkTimeMs = args.length > 1 ? Long.parseLong(args[1]) : 500;
-        int matchup = args.length > 2 ? Integer.parseInt(args[2]) : 3;
+        int rounds = args.length > 0 ? Integer.parseInt(args[0]) : 6;
+        long thinkTimeMs = args.length > 1 ? Long.parseLong(args[1]) : 3000;
+        int matchup = args.length > 2 ? Integer.parseInt(args[2]) : 2;
         boolean useBook = true;
 
         EngineConfig e1;
@@ -34,7 +34,7 @@ public class TournamentMain {
                 e2 = new EngineConfig("ImprovedParallel", maybeWithBook(new ImprovedParallelChessAI(verbose), useBook), thinkTimeMs);
             }
             case 3 -> {
-                e1 = new EngineConfig("Single", maybeWithBook(new ChessAI(verbose), false), thinkTimeMs);
+                e1 = new EngineConfig("Single", maybeWithBook(new ChessAI(verbose), useBook), thinkTimeMs);
                 e2 = new EngineConfig("ImprovedParallel", maybeWithBook(new ImprovedParallelChessAI(verbose), useBook), thinkTimeMs);
             }
             default -> {
