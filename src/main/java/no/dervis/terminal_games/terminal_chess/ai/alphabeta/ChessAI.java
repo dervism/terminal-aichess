@@ -19,8 +19,9 @@ import java.util.Random;
  *   <li>Quiescence search (captures + check evasions)</li>
  *   <li>Transposition table with Zobrist hashing</li>
  *   <li>Check extensions</li>
+ *   <li>Null-move pruning</li>
  *   <li>Late Move Reductions (LMR)</li>
- *   <li>Move ordering: TT move → MVV-LVA captures → killer moves → history heuristic</li>
+ *   <li>Move ordering: TT move → SEE-scored captures → killer moves → history heuristic</li>
  *   <li>Configurable time management</li>
  * </ul>
  */
@@ -257,6 +258,23 @@ public class ChessAI implements Chess, Engine {
         // Leaf node → quiescence search
         if (depth <= 0) return quiescence(board, alpha, beta, color, ply);
 
+        // Null-move pruning: if giving the opponent a free move still results
+        // in a beta cutoff, this position is likely so good we can prune it.
+        // Skip when in check, at PV nodes, or when side has no major/minor pieces.
+        if (!pvNode && !inCheck && depth >= 3 && hasNonPawnMaterial(board, color)) {
+            int R = 2 + (depth >= 6 ? 1 : 0); // adaptive reduction
+            Bitboard nullCopy = board.copy();
+            nullCopy.makeNullMove();
+            int nullScore = -alphaBeta(nullCopy, depth - 1 - R, -beta, -beta + 1,
+                    1 - color, ply + 1, false);
+            if (stopped) return 0;
+            if (nullScore >= beta) {
+                // Don't trust mate scores from null move
+                if (nullScore > MATE_THRESHOLD) nullScore = beta;
+                return nullScore;
+            }
+        }
+
         // Generate legal moves
         Generator gen = new Generator(board);
         List<Integer> moves = gen.generateMoves(color);
@@ -380,13 +398,18 @@ public class ChessAI implements Chess, Engine {
                     .toList();
         }
 
-        // Score and sort captures by MVV-LVA
+        // Score and sort captures by SEE
         int[] moveScores = scoreMoves(moves, board, 0, ply, color);
         // Use a mutable copy for sorting
         var mutableMoves = new java.util.ArrayList<>(moves);
         sortMoves(mutableMoves, moveScores);
 
         for (int move : mutableMoves) {
+            // SEE pruning: skip losing captures in quiescence (unless in check)
+            if (!inCheck && isCapture(move, board) && SEE.isLosingCapture(board, move)) {
+                continue;
+            }
+
             Bitboard copy = board.copy();
             copy.makeMove(move);
 
@@ -421,19 +444,18 @@ public class ChessAI implements Chess, Engine {
             int to = (move >>> 7) & 0x3F;
             int captured = board.getPiece(to);
 
-            if (captured != -1) {
-                // Capture: MVV-LVA
-                int from = move >>> 14;
-                int attacker = board.getPiece(from) % 6;
-                int victim = captured % 6;
-                scores[i] = CAPTURE_BASE + MVV_LVA[victim][attacker];
-            } else {
-                // En passant is also a capture
-                int moveType = (move >>> 4) & 0x7;
-                if (moveType == MoveType.EN_PASSANT.ordinal()) {
-                    scores[i] = CAPTURE_BASE + MVV_LVA[pawn][pawn];
-                    continue;
+            if (captured != -1 || ((move >>> 4) & 0x7) == MoveType.EN_PASSANT.ordinal()) {
+                // Capture: use SEE for accurate exchange evaluation
+                int seeScore = SEE.see(board, move);
+                if (seeScore >= 0) {
+                    // Winning/equal captures: base + SEE value
+                    scores[i] = CAPTURE_BASE + seeScore;
+                } else {
+                    // Losing captures: below killers but above bad quiets
+                    scores[i] = seeScore;
                 }
+                continue;
+            } else {
 
                 // Killer moves
                 if (ply < MAX_PLY) {
@@ -588,6 +610,17 @@ public class ChessAI implements Chess, Engine {
         if (System.currentTimeMillis() - startTime >= timeLimitMs) {
             stopped = true;
         }
+    }
+
+    /**
+     * Returns true if the given side has at least one non-pawn, non-king piece.
+     * Used to avoid null-move pruning in pawn-only endgames (zugzwang risk).
+     */
+    private static boolean hasNonPawnMaterial(Bitboard board, int color) {
+        return (Evaluation.getPieceBB(board, knight, color)
+              | Evaluation.getPieceBB(board, bishop, color)
+              | Evaluation.getPieceBB(board, rook, color)
+              | Evaluation.getPieceBB(board, queen, color)) != 0;
     }
 
     private static boolean isMateScore(int score) {

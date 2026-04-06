@@ -269,6 +269,14 @@ public class Bitboard implements Board, Chess {
         return colorToMove;
     }
 
+    /**
+     * Makes a "null move" — flips the side to move without moving any piece.
+     * Used by null-move pruning in the search.
+     */
+    public void makeNullMove() {
+        colorToMove ^= 1;
+    }
+
     public void setColorToMove(int color) {
         this.colorToMove = color;
     }
