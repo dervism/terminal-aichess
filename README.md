@@ -9,7 +9,9 @@ Simple Java 25 chess app that uses bitboards. The implementation is mainly for l
 
 This engine uses Magic Bitboards, which allow the engine to rapidly generate attacks and sliding piece moves without loops. As it is severely hard to correctly implement bit-shifting and bit-masking correctly on Magic Bitboards, the inspiration for the magic numbers implementation is based on examples shared at the [Chess Programming Wiki](https://www.chessprogramming.org/Magic_Bitboards) website. Before Magic Bitboards, I used Java streams and loops to calculate attacks and sliding moves. This technique worked but was extremely slow and analyzed only up to four-ply depth. You can read about the [ideas behind it in the README file](src/main/java/no/dervis/terminal_games/terminal_chess/moves/attacks/history/README.md). With Magic Bitboards, however, we can analyze tens of millions of positions in a few seconds.
 
-PS: The game works, and the AI plays strong games without an opening book even at level 1. This is still a work in progress.
+The engine features two ai players – a single-threaded ai, and a multithreaded parallel ai that processes multiple millions of more nodes than the single-threaded version.
+
+PS: The AI plays strong games without an opening book, even at level 1. This is still a work in progress.
 
 Running in your terminal:
 `java --enable-preview --source 25  src/main/java/no/dervis/terminal_games/terminal_chess/TerminalChess.java`
@@ -31,6 +33,7 @@ See the [README for more information](src/main/java/no/dervis/terminal_games/ter
 - [x] Implement perft move generation analysis
 - [x] Implement basic AI (𝛼/ϐ search)
 - [x] Implement advanced AI (𝛼/ϐ search + iterative deepening + quiescence search + Negamax + Principal Variation Search (PVS) + transposition table + check extensions + Late Move Reductions (LMR) + Killer & History heuristics + time management)
+- [x] Implement multithreaded parallel processing ai
 - [ ] Implement opening book
 - [ ] Implement superior ai (monte-carlo simulation and neural networks)
 
