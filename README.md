@@ -33,6 +33,8 @@ See the [README for more information](src/main/java/no/dervis/terminal_games/ter
 - [x] Implement perft move generation analysis
 - [x] Implement basic AI (𝛼/ϐ search)
 - [x] Implement advanced AI (𝛼/ϐ search + iterative deepening + quiescence search + Negamax + Principal Variation Search (PVS) + transposition table + check extensions + Late Move Reductions (LMR) + Killer & History heuristics + time management)
+- [x] Implement advanced optimizations (aspiration windows, internal iterative deepening, reverse futility pruning, futility pruning, razoring, delta pruning in quiescence, countermove heuristic, history-informed LMR, singular extensions)
+- [x] Improve evaluation (connected rooks, knight outposts, king danger zone scoring, space advantage, pawn storms)
 - [x] Implement multithreaded parallel processing ai
 - [x] Implement opening book
 - [ ] Implement superior ai (monte-carlo simulation and neural networks)
