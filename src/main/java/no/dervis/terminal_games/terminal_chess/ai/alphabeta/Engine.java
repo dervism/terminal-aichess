@@ -15,4 +15,10 @@ public interface Engine {
      * @return the best move (encoded int), or 0 if no legal moves
      */
     int findBestMove(Bitboard board, long timeLimitMs);
+
+    /**
+     * Resets per-game state so the engine can be reused across multiple games
+     * (e.g. in a tournament). The default implementation is a no-op.
+     */
+    default void reset() {}
 }

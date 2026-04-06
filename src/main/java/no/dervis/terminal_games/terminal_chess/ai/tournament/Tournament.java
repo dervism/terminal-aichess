@@ -1,10 +1,11 @@
 package no.dervis.terminal_games.terminal_chess.ai.tournament;
 
+import no.dervis.terminal_games.terminal_chess.ai.alphabeta.BookEngine;
+import no.dervis.terminal_games.terminal_chess.ai.alphabeta.Engine;
 import no.dervis.terminal_games.terminal_chess.board.Bitboard;
 import no.dervis.terminal_games.terminal_chess.board.Chess;
 import no.dervis.terminal_games.terminal_chess.moves.Move;
 import no.dervis.terminal_games.terminal_chess.moves.generator.Generator;
-import no.dervis.terminal_games.terminal_chess.openingbook.OpeningBook;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -68,6 +69,9 @@ public class Tournament implements Chess {
             EngineConfig whiteEngine = engine1IsWhite ? engine1 : engine2;
             EngineConfig blackEngine = engine1IsWhite ? engine2 : engine1;
 
+            whiteEngine.engine().reset();
+            blackEngine.engine().reset();
+
             if (verbose) {
                 System.out.printf("Game %d/%d: %s (W) vs %s (B)%n",
                         game, rounds, whiteEngine.name(), blackEngine.name());
@@ -109,23 +113,19 @@ public class Tournament implements Chess {
         String drawReason = "";
         int moveCount = 0;
 
-        OpeningBook book = new OpeningBook();
         String openingName = "";
-        boolean inBook = true;
 
         while (moveCount < MAX_MOVES_PER_GAME) {
-            // Try the opening book first; fall back to engine search
-            int move = inBook ? book.getBookMove(board) : 0;
-            if (move == 0 && inBook) {
-                inBook = false;
-                openingName = book.lastOpeningName();
+            EngineConfig currentConfig = (board.turn() == white) ? whiteEngine : blackEngine;
+            Engine currentEngine = currentConfig.engine();
+            int move = currentEngine.findBestMove(board, currentConfig.thinkTimeMs());
+
+            if (currentEngine instanceof BookEngine bookEngine
+                    && bookEngine.justLeftBook() && openingName.isEmpty()) {
+                openingName = bookEngine.openingName();
                 if (verbose) {
                     System.out.printf("  Opening: %s%n", openingName);
                 }
-            }
-            if (move == 0) {
-                EngineConfig current = (board.turn() == white) ? whiteEngine : blackEngine;
-                move = current.engine().findBestMove(board, current.thinkTimeMs());
             }
 
             if (move == 0) break;
@@ -170,7 +170,8 @@ public class Tournament implements Chess {
         }
 
         if (openingName.isEmpty()) {
-            openingName = book.lastOpeningName();
+            if (whiteEngine.engine() instanceof BookEngine b) openingName = b.openingName();
+            if (openingName.isEmpty() && blackEngine.engine() instanceof BookEngine b) openingName = b.openingName();
         }
 
         return new GameResult(

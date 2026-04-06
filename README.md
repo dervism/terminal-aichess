@@ -34,7 +34,7 @@ See the [README for more information](src/main/java/no/dervis/terminal_games/ter
 - [x] Implement basic AI (𝛼/ϐ search)
 - [x] Implement advanced AI (𝛼/ϐ search + iterative deepening + quiescence search + Negamax + Principal Variation Search (PVS) + transposition table + check extensions + Late Move Reductions (LMR) + Killer & History heuristics + time management)
 - [x] Implement multithreaded parallel processing ai
-- [ ] Implement opening book
+- [x] Implement opening book
 - [ ] Implement superior ai (monte-carlo simulation and neural networks)
 
 ### Move generation correctness

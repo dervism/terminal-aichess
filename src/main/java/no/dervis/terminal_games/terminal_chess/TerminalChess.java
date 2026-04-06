@@ -1,8 +1,6 @@
 package no.dervis.terminal_games.terminal_chess;
 
-import no.dervis.terminal_games.terminal_chess.ai.alphabeta.ChessAI;
-import no.dervis.terminal_games.terminal_chess.ai.alphabeta.Engine;
-import no.dervis.terminal_games.terminal_chess.ai.alphabeta.ParallelChessAI;
+import no.dervis.terminal_games.terminal_chess.ai.alphabeta.*;
 import no.dervis.terminal_games.terminal_chess.board.Bitboard;
 import no.dervis.terminal_games.terminal_chess.board.Board.Tuple2;
 import no.dervis.terminal_games.terminal_chess.board.Board.Tuple3;
@@ -10,7 +8,6 @@ import no.dervis.terminal_games.terminal_chess.board.BoardPrinter;
 import no.dervis.terminal_games.terminal_chess.board.Chess;
 import no.dervis.terminal_games.terminal_chess.moves.Move;
 import no.dervis.terminal_games.terminal_chess.moves.generator.Generator;
-import no.dervis.terminal_games.terminal_chess.openingbook.OpeningBook;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -22,6 +19,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Scanner;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static no.dervis.terminal_games.terminal_chess.board.Chess.black;
 import static no.dervis.terminal_games.terminal_chess.board.Chess.white;
@@ -61,16 +59,14 @@ public class TerminalChess implements BoardPrinter {
         boolean userColor = scanner.nextLine().equalsIgnoreCase("w");
         int userTurn = userColor ? white : black;
 
-        String strengthLabel = chooseDifficultyLabel();
-        long thinkTimeMs = thinkTimeFromLabel(strengthLabel);
-        String engineLabel = chooseEngineLabel();
-        Engine ai = createEngine(engineLabel);
+        Difficulty difficulty = chooseDifficulty();
+        EngineType engineType = chooseEngine();
+        boolean useBook = chooseOpeningBook();
+        Engine ai = engineType.create();
+        if (useBook) ai = new BookEngine(ai);
 
         String whitePlayer = (userTurn == white) ? "player" : "computer";
         String blackPlayer = (userTurn == black) ? "player" : "computer";
-
-        OpeningBook book = new OpeningBook();
-        boolean engineInBook = true;
 
         List<String> moveHistory = new ArrayList<>();
         List<String> positionHistory = new ArrayList<>();
@@ -152,20 +148,20 @@ public class TerminalChess implements BoardPrinter {
                     }
                 }
             } else {
-                // Try the opening book first; fall back to engine search
-                int move = engineInBook ? book.getBookMove(board) : 0;
-                if (move != 0) {
-                    Move decoded = Move.createMove(move, board);
-                    System.out.println("Book move: " + decoded.toStringShort());
+                int move = ai.findBestMove(board, difficulty.thinkTimeMs);
+                if (move == 0) {
+                    System.out.println("No legal moves available.");
                 } else {
-                    if (engineInBook) {
-                        engineInBook = false;
-                        System.out.println("Opening: " + book.lastOpeningName());
+                    Move decoded = Move.createMove(move, board);
+                    if (ai instanceof BookEngine bookEngine && bookEngine.lastMoveFromBook()) {
+                        System.out.println("Book move: " + decoded.toStringShort());
+                    } else {
+                        if (ai instanceof BookEngine bookEngine && bookEngine.justLeftBook()) {
+                            System.out.println("Opening: " + bookEngine.openingName());
+                        }
+                        System.out.println("Computer move: " + decoded.toStringShort());
                     }
-                    move = getMoveFromComputer(ai, board, thinkTimeMs);
-                }
-                if (move != 0) {
-                    moveHistory.add(Move.createMove(move, board).toAlgebraic());
+                    moveHistory.add(decoded.toAlgebraic());
                     board.makeMove(move);
                     positionHistory.add(board.positionKey());
                 }
@@ -214,12 +210,12 @@ public class TerminalChess implements BoardPrinter {
         }
 
         return handleGameOver(board, result, whitePlayer, blackPlayer,
-                engineLabel, strengthLabel, moveHistory);
+                engineType, difficulty, moveHistory);
     }
 
     private static boolean handleGameOver(Bitboard board, String result,
                                           String whitePlayer, String blackPlayer,
-                                          String engineLabel, String strengthLabel,
+                                          EngineType engineType, Difficulty difficulty,
                                           List<String> moveHistory) {
         System.out.println();
         System.out.println("Game over.");
@@ -233,12 +229,12 @@ public class TerminalChess implements BoardPrinter {
         return switch (choice) {
             case "2" -> {
                 saveGame(board, result, whitePlayer, blackPlayer,
-                        engineLabel, strengthLabel, moveHistory);
+                        engineType, difficulty, moveHistory);
                 yield true;
             }
             case "3" -> {
                 saveGame(board, result, whitePlayer, blackPlayer,
-                        engineLabel, strengthLabel, moveHistory);
+                        engineType, difficulty, moveHistory);
                 System.out.println("Goodbye.");
                 yield false;
             }
@@ -252,7 +248,7 @@ public class TerminalChess implements BoardPrinter {
 
     private static void saveGame(Bitboard board, String result,
                                  String whitePlayer, String blackPlayer,
-                                 String engineLabel, String strengthLabel,
+                                 EngineType engineType, Difficulty difficulty,
                                  List<String> moveHistory) {
         try {
             Files.createDirectories(SAVES_DIR);
@@ -265,8 +261,8 @@ public class TerminalChess implements BoardPrinter {
             sb.append("Date:     ").append(now.format(DISPLAY_FMT)).append('\n');
             sb.append("White:    ").append(whitePlayer).append('\n');
             sb.append("Black:    ").append(blackPlayer).append('\n');
-            sb.append("Engine:   ").append(engineLabel).append('\n');
-            sb.append("Strength: ").append(strengthLabel).append('\n');
+            sb.append("Engine:   ").append(engineType.label).append('\n');
+            sb.append("Strength: ").append(difficulty.label).append('\n');
             sb.append("Result:   ").append(result.isEmpty() ? "unknown" : result).append('\n');
             sb.append("FEN:      ").append(board.toFEN()).append('\n');
             sb.append('\n');
@@ -287,18 +283,6 @@ public class TerminalChess implements BoardPrinter {
         } catch (IOException e) {
             System.out.println("Failed to save game: " + e.getMessage());
         }
-    }
-
-    private static int getMoveFromComputer(Engine ai, Bitboard board, long thinkTimeMs) {
-        System.out.println("Thinking...");
-        int move = ai.findBestMove(board, thinkTimeMs);
-        if (move == 0) {
-            System.out.println("No legal moves available.");
-            return 0;
-        }
-        Move computerMove = Move.createMove(move, board);
-        System.out.println("Computer move: " + computerMove.toStringShort());
-        return move;
     }
 
     private static Optional<Tuple2<Tuple3, Tuple3>> parseMove(String move) {
@@ -433,59 +417,80 @@ public class TerminalChess implements BoardPrinter {
         };
     }
 
-    private static String chooseDifficultyLabel() {
+    enum Difficulty {
+        EASY("Easy", 1_000),
+        MEDIUM("Medium", 3_000),
+        HARD("Hard", 5_000),
+        EXPERT("Expert", 20_000),
+        EXTRA_HARD("Extra hard", 50_000);
+
+        final String label;
+        final long thinkTimeMs;
+
+        Difficulty(String label, long thinkTimeMs) {
+            this.label = label;
+            this.thinkTimeMs = thinkTimeMs;
+        }
+    }
+
+    enum EngineType {
+        SINGLE("Single-threaded", ChessAI::new),
+        PARALLEL("Parallel (Lazy SMP)", ParallelChessAI::new),
+        IMPROVED_PARALLEL("Improved Parallel (Lazy SMP)", ImprovedParallelChessAI::new);
+
+        final String label;
+        private final Supplier<Engine> factory;
+
+        EngineType(String label, Supplier<Engine> factory) {
+            this.label = label;
+            this.factory = factory;
+        }
+
+        Engine create() { return factory.get(); }
+    }
+
+    private static Difficulty chooseDifficulty() {
+        Difficulty[] values = Difficulty.values();
         System.out.println("Select difficulty:");
-        System.out.println("  1. Easy       (1 second)");
-        System.out.println("  2. Medium     (3 seconds)");
-        System.out.println("  3. Hard       (5 seconds)");
-        System.out.println("  4. Expert     (10 seconds)");
-        System.out.println("  5. Extra hard (50 seconds)");
-        System.out.print("Choice (1-5): ");
+        for (int i = 0; i < values.length; i++) {
+            System.out.printf("  %d. %-12s (%d seconds)%n", i + 1, values[i].label, values[i].thinkTimeMs / 1000);
+        }
+        System.out.printf("Choice (1-%d): ", values.length);
         String choice = scanner.nextLine().trim();
-        return switch (choice) {
-            case "1" -> "Easy";
-            case "2" -> "Medium";
-            case "3" -> "Hard";
-            case "4" -> "Expert";
-            case "5" -> "Extra hard";
-            default -> {
-                System.out.println("Invalid choice, defaulting to Medium.");
-                yield "Medium";
-            }
-        };
+        try {
+            int idx = Integer.parseInt(choice) - 1;
+            if (idx >= 0 && idx < values.length) return values[idx];
+        } catch (NumberFormatException ignored) {}
+        System.out.println("Invalid choice, defaulting to Medium.");
+        return Difficulty.MEDIUM;
     }
 
-    private static long thinkTimeFromLabel(String label) {
-        return switch (label) {
-            case "Easy" -> 1000;
-            case "Medium" -> 3000;
-            case "Hard" -> 5000;
-            case "Expert" -> 10000;
-            case "Extra hard" -> 50000;
-            default -> 3000;
-        };
-    }
-
-    private static String chooseEngineLabel() {
+    private static EngineType chooseEngine() {
+        EngineType[] values = EngineType.values();
         System.out.println("Choose engine:");
-        System.out.println("  1. Single-threaded");
-        System.out.println("  2. Parallel (Lazy SMP)");
-        System.out.print("Engine (1/2): ");
-        String choice = scanner.nextLine().trim();
-        if (choice.equals("2")) {
-            int cores = Runtime.getRuntime().availableProcessors();
-            System.out.println("Using parallel engine with " + cores + " threads.");
-            return "Parallel (Lazy SMP)";
+        for (int i = 0; i < values.length; i++) {
+            System.out.printf("  %d. %s%n", i + 1, values[i].label);
         }
-        System.out.println("Using single-threaded engine.");
-        return "Single-threaded";
+        System.out.printf("Engine (1-%d): ", values.length);
+        String choice = scanner.nextLine().trim();
+        try {
+            int idx = Integer.parseInt(choice) - 1;
+            if (idx >= 0 && idx < values.length) {
+                EngineType selected = values[idx];
+                if (selected != EngineType.SINGLE) {
+                    System.out.println("Using " + selected.label + " with "
+                            + Runtime.getRuntime().availableProcessors() + " threads.");
+                }
+                return selected;
+            }
+        } catch (NumberFormatException ignored) {}
+        System.out.println("Invalid choice, defaulting to Single-threaded.");
+        return EngineType.SINGLE;
     }
 
-    private static Engine createEngine(String engineLabel) {
-        if (engineLabel.startsWith("Parallel")) {
-            return new ParallelChessAI();
-        }
-        return new ChessAI();
+    private static boolean chooseOpeningBook() {
+        System.out.print("Use opening book? (y/n): ");
+        return scanner.nextLine().trim().equalsIgnoreCase("y");
     }
 
     private static void clearTerminal() {
