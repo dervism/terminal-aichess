@@ -58,8 +58,9 @@ public class TerminalChess implements BoardPrinter {
 
         System.out.println(Chess.boardToStr.apply(board, true));
 
-        System.out.print("Play white or black? (w/b) ");
-        boolean userColor = scanner.nextLine().equalsIgnoreCase("w");
+        System.out.print("Play white or black? (W/b) ");
+        String colorChoice = scanner.nextLine().trim();
+        boolean userColor = colorChoice.isEmpty() || colorChoice.equalsIgnoreCase("w");
         int userTurn = userColor ? white : black;
 
         Difficulty difficulty = chooseDifficulty();
@@ -461,8 +462,9 @@ public class TerminalChess implements BoardPrinter {
         for (int i = 0; i < values.length; i++) {
             System.out.printf("  %d. %-12s (%d seconds)%n", i + 1, values[i].label, values[i].thinkTimeMs / 1000);
         }
-        System.out.printf("Choice (1-%d): ", values.length);
+        System.out.printf("Choice (1-%d, default=2): ", values.length);
         String choice = scanner.nextLine().trim();
+        if (choice.isEmpty()) return Difficulty.MEDIUM;
         try {
             int idx = Integer.parseInt(choice) - 1;
             if (idx >= 0 && idx < values.length) return values[idx];
@@ -477,8 +479,9 @@ public class TerminalChess implements BoardPrinter {
         for (int i = 0; i < values.length; i++) {
             System.out.printf("  %d. %s%n", i + 1, values[i].label);
         }
-        System.out.printf("Engine (1-%d): ", values.length);
+        System.out.printf("Engine (1-%d, default=1): ", values.length);
         String choice = scanner.nextLine().trim();
+        if (choice.isEmpty()) return EngineType.SINGLE;
         try {
             int idx = Integer.parseInt(choice) - 1;
             if (idx >= 0 && idx < values.length) {
@@ -495,8 +498,9 @@ public class TerminalChess implements BoardPrinter {
     }
 
     private static boolean chooseOpeningBook() {
-        System.out.print("Use opening book? (y/n): ");
-        return scanner.nextLine().trim().equalsIgnoreCase("y");
+        System.out.print("Use opening book? (Y/n): ");
+        String choice = scanner.nextLine().trim();
+        return choice.isEmpty() || choice.equalsIgnoreCase("y");
     }
 
     private static String formatMovePair(List<String> moveHistory) {

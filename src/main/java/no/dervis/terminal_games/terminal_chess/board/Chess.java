@@ -52,6 +52,14 @@ public interface Chess {
             = (from, to) -> type -> Move.createMove(from.index(), to.index(), type.ordinal());
 
     BiFunction<Bitboard, Boolean, StringBuilder> boardToStr = (board, reverse) -> {
+        // 24-bit color board: tan / brown squares, white / black pieces
+        String lightSq = "\033[48;2;209;176;131m";  // tan
+        String darkSq  = "\033[48;2;160;120;80m";   // brown
+        String whiteFgLight = "\033[38;2;255;255;240m"; // ivory — visible on tan
+        String whiteFgDark  = "\033[38;2;255;255;255m"; // white — visible on brown
+        String blackFg = "\033[38;5;16m";
+        String reset   = "\033[0m";
+
         StringBuilder builder = new StringBuilder();
         IntStream.range(0, 8)
                 .map(i -> reverse ? (8 - 1 - i) : i)
@@ -59,12 +67,15 @@ public interface Chess {
                     String line = IntStream.range(0, 8)
                             .map(c -> reverse ? c : (7 - c))
                             .mapToObj(col -> {
-                                String square = pieceToStr.apply(board.getPiece(BoardPrinter.indexFn.apply(row, col)));
-                                if ((row + col) % 2 != 0) {
-                                    return "\u001B[47m"+square+"\u001B[0m";
-                                } else {
-                                    return square;
-                                }
+                                int piece = board.getPiece(BoardPrinter.indexFn.apply(row, col));
+                                String symbol = pieceToStr.apply(piece);
+                                boolean isLightSq = (row + col) % 2 != 0;
+                                String bg = isLightSq ? lightSq : darkSq;
+                                String fg;
+                                if (piece >= 6) fg = blackFg;
+                                else if (piece >= 0) fg = isLightSq ? whiteFgLight : whiteFgDark;
+                                else fg = "";
+                                return bg + fg + symbol + reset;
                             })
                             .collect(StringBuilder::new, StringBuilder::append, StringBuilder::append)
                             .toString();
